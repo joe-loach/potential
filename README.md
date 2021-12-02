@@ -8,7 +8,7 @@ Potential is an **interactive field visualizer** built in [Rust][rust-homepage].
 
 </div>
 
-# Things to do
+## Things to do
 
 - [ ] Zooming and panning around the scene
 - [ ] Placing objects in the scene
