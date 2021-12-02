@@ -552,7 +552,7 @@ function into_sapp_keycode(key_code) {
     console.log("Unsupported keyboard key: ", key_code)
 }
 
-function dpi_scale() {
+function dpi_scale()  {
     if (high_dpi) {
         return window.devicePixelRatio || 1.0;
     } else {
