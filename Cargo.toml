@@ -12,3 +12,4 @@ miniquad = "=0.3.0-alpha.37"
 # gui
 egui = "0.15.0"
 egui-miniquad = "0.7.0"
+glam = "0.20.1"

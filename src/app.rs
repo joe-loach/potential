@@ -1,42 +1,96 @@
-use crate::emq;
-use crate::mq::{self, Context, EventHandler};
+mod gui;
+mod shader;
 
-pub struct Potential {
+use crate::emq;
+use crate::mq;
+
+use glam::*;
+use mq::Bindings;
+use mq::Buffer;
+use mq::BufferLayout;
+use mq::BufferType;
+
+pub struct App {
+    // gui
     emq: emq::EguiMq,
+    // shader
+    pipeline: Pipeline,
+    bindings: Bindings,
 }
 
-impl Potential {
-    pub fn new(ctx: &mut Context) -> Self {
+impl App {
+    pub fn new(ctx: &mut mq::Context) -> Self {
+        #[rustfmt::skip]
+        let screen = [
+            Vec2::new(-1.0, -1.0),
+            Vec2::new( 1.0, -1.0),
+            Vec2::new( 1.0,  1.0),
+            Vec2::new(-1.0,  1.0),
+        ];
+        let vertex_buffer = Buffer::immutable(ctx, BufferType::VertexBuffer, &screen);
+        let index_buffer = Buffer::immutable(ctx, BufferType::IndexBuffer, &[0_u16, 1, 2, 0, 2, 3]);
+
+        let bindings = Bindings {
+            vertex_buffers: vec![vertex_buffer],
+            index_buffer,
+            images: Vec::new(),
+        };
+
+        let shader = shader::shader(ctx).expect("couldn't compile shader");
+        let pipeline = Pipeline::new(
+            ctx,
+            &[BufferLayout::default()],
+            &[VertexAttribute::new("pos", VertexFormat::Float2)],
+            shader,
+        );
+        
         Self {
             emq: emq::EguiMq::new(ctx),
+            pipeline,
+            bindings,
         }
-    }
-
-    fn ui(&mut self) {
-        let ctx = self.emq.egui_ctx();
-
-        egui::Window::new("Window").show(ctx, |ui| {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                if ui.button("Quit").clicked() {
-                    std::process::exit(0);
-                }
-            }
-        });
     }
 }
 
-impl EventHandler for Potential {
+use mq::Pipeline;
+use mq::VertexAttribute;
+use mq::VertexFormat;
+use mq::{Context, EventHandler};
+
+impl EventHandler for App {
     fn update(&mut self, _ctx: &mut Context) {}
 
     fn draw(&mut self, ctx: &mut Context) {
-        ctx.clear(Some((1., 1., 1., 1.)), None, None);
+        ctx.clear((1.0, 1.0, 1.0, 1.0).into(), None, None);
 
         self.emq.begin_frame(ctx);
         self.ui();
         self.emq.end_frame(ctx);
 
-        // draw here
+        ctx.begin_default_pass(Default::default());
+
+        ctx.apply_pipeline(&self.pipeline);
+        ctx.apply_bindings(&self.bindings);
+
+        let screen_size = ctx.screen_size();
+        let ratio = screen_size.1 / screen_size.0;
+        let (scale_x, scale_y) = if ratio <= 1.0 {
+            (ratio, 1.0)
+        } else {
+            (1.0, 1.0 / ratio)
+        };
+
+        #[rustfmt::skip]
+        let transform = Mat4::from_cols_array(&[
+            scale_x, 0.0, 0.0, 0.0,
+            0.0, scale_y, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ]);
+        ctx.apply_uniforms(&transform);
+        ctx.draw(0, 6, 1);
+
+        ctx.end_render_pass();
 
         self.emq.draw(ctx);
 

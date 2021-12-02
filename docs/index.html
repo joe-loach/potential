@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            margin: 0px;
+        }
+        canvas {
+            margin: 0px;
+            padding: 0px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: absolute;
+            background: black;
+            z-index: 0;
+        }
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <title>Potential</title>
+</head>
+<body>
+    <canvas id="glcanvas" tabindex='1' width=1920 height=1080></canvas>
+    <script src="gl.js"></script>
+    <script>load("potential.wasm");</script>
+    <script>
+        $(document).ready(function(){
+          $('body').on('contextmenu', '#glcanvas', function(e){ return false; });
+        });
+        document.getElementById("glcanvas").focus();
+    </script>
+</body>
+</html>
