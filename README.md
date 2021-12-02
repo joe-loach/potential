@@ -1,6 +1,6 @@
 <div align="center">
 
-# potential
+# Potential 🌠 
 
 [![website-link][website-badge]][website-link]
 
