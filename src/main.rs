@@ -28,7 +28,7 @@ impl epi::RepaintSignal for ExampleRepaintSignal {
 fn demo(ctx: &egui::CtxRef, frame: &mut epi::Frame) {
     egui::Window::new("demo").show(&ctx, |ui| {
         if ui.button("Click").clicked() {
-
+            // do something
         }
     });
 }
@@ -62,8 +62,8 @@ async fn run() {
 
     #[cfg(target_arch = "wasm32")]
     {
-        use winit::platform::web::WindowExtWebSys;
         use wasm_bindgen::JsCast;
+        use winit::platform::web::WindowExtWebSys;
         // On wasm, append the canvas to the document body
         web_sys::window()
             .and_then(|win| win.document())
@@ -73,7 +73,7 @@ async fn run() {
                     .ok()
             })
             .expect("couldn't append canvas to document body");
-        
+
         // Retrieve current width and height dimensions of browser client window
         let get_window_size = || {
             let client_window = web_sys::window().unwrap();
@@ -94,9 +94,10 @@ async fn run() {
             let size = get_window_size();
             window.set_inner_size(size);
         }) as Box<dyn FnMut(_)>);
-        web_sys::window().unwrap()
-             .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
-             .unwrap();
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
+            .unwrap();
         closure.forget();
     }
 
@@ -158,7 +159,7 @@ async fn run() {
     let mut previous_frame_time = None;
     event_loop.run(move |event, _, control_flow| {
         platform.handle_event(&event);
-        
+
         match event {
             winit::event::Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
