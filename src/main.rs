@@ -1,5 +1,7 @@
 #![deny(clippy::all)]
 
+use std::rc::Rc;
+
 use winit::dpi::LogicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -56,11 +58,12 @@ async fn run() {
             .expect("WindowBuilder error")
     };
 
-    // let window = Rc::new(window);
+    let window = Rc::new(window);
 
     #[cfg(target_arch = "wasm32")]
     {
         use winit::platform::web::WindowExtWebSys;
+        use wasm_bindgen::JsCast;
         // On wasm, append the canvas to the document body
         web_sys::window()
             .and_then(|win| win.document())
@@ -70,49 +73,42 @@ async fn run() {
                     .ok()
             })
             .expect("couldn't append canvas to document body");
-        // use wasm_bindgen::JsCast;
-        // use winit::platform::web::WindowExtWebSys;
+        
+        // Retrieve current width and height dimensions of browser client window
+        let get_window_size = || {
+            let client_window = web_sys::window().unwrap();
+            LogicalSize::new(
+                client_window.inner_width().unwrap().as_f64().unwrap(),
+                client_window.inner_height().unwrap().as_f64().unwrap(),
+            )
+        };
 
-        // // Retrieve current width and height dimensions of browser client window
-        // let get_window_size = || {
-        //     let client_window = web_sys::window().unwrap();
-        //     LogicalSize::new(
-        //         client_window.inner_width().unwrap().as_f64().unwrap(),
-        //         client_window.inner_height().unwrap().as_f64().unwrap(),
-        //     )
-        // };
+        let window = Rc::clone(&window);
 
-        // let window = Rc::clone(&window);
-
-        // // Initialize winit window with current dimensions of browser client
-        // window.set_inner_size(get_window_size());
-
-        // let client_window = web_sys::window().unwrap();
-
-        // // Attach winit canvas to body element
-        // web_sys::window()
-        //     .and_then(|win| win.document())
-        //     .and_then(|doc| doc.body())
-        //     .and_then(|body| {
-        //         body.append_child(&web_sys::Element::from(window.canvas()))
-        //             .ok()
-        //     })
-        //     .expect("couldn't append canvas to document body");
+        // Initialize winit window with current dimensions of browser client
+        window.set_inner_size(get_window_size());
 
         // Listen for resize event on browser client. Adjust winit window dimensions
         // on event trigger
-        // let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::Event| {
-        //     let size = get_window_size();
-        //     window.set_inner_size(size)
-        // }) as Box<dyn FnMut(_)>);
-        // client_window
-        //     .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
-        //     .unwrap();
-        // closure.forget();
+        let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let size = get_window_size();
+            window.set_inner_size(size);
+        }) as Box<dyn FnMut(_)>);
+        web_sys::window().unwrap()
+             .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
+             .unwrap();
+        closure.forget();
     }
 
-    let instance = wgpu::Instance::new(wgpu::Backends::all());
-    let surface = unsafe { instance.create_surface(&window) };
+    let backends = {
+        if cfg!(target_arch = "wasm32") {
+            wgpu::Backends::all()
+        } else {
+            wgpu::Backends::PRIMARY
+        }
+    };
+    let instance = wgpu::Instance::new(backends);
+    let surface = unsafe { instance.create_surface(window.as_ref()) };
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -247,7 +243,11 @@ async fn run() {
             }
 
             winit::event::Event::WindowEvent { event, .. } => match event {
-                winit::event::WindowEvent::Resized(size) => {}
+                winit::event::WindowEvent::Resized(size) => {
+                    surface_config.width = size.width;
+                    surface_config.height = size.height;
+                    surface.configure(&device, &surface_config);
+                }
                 _ => (),
             },
             _ => (),
