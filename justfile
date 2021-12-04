@@ -8,5 +8,5 @@ serve: build
 
 # build potential
 build:
-    cargo build --release --target wasm32-unknown-unknown
+    cargo build --release --target wasm32-unknown-unknown --features web
     wasm-bindgen --target web --no-typescript --out-dir ./docs/ ./target/wasm32-unknown-unknown/release/potential.wasm
