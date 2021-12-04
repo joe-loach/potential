@@ -1,8 +1,8 @@
 use crate::mq;
 use mq::{Context, Shader, ShaderError, ShaderMeta, UniformBlockLayout, UniformDesc, UniformType};
 
-const VERTEX: &str = include_str!("shader/vertex.glsl");
-const FRAGMENT: &str = include_str!("shader/frag.glsl");
+const VERTEX: &str = include_str!("vertex.glsl");
+const FRAGMENT: &str = include_str!("frag.glsl");
 
 pub fn shader(ctx: &mut Context) -> Result<Shader, ShaderError> {
     let meta = ShaderMeta {
