@@ -2,14 +2,27 @@
 name = "potential"
 version = "0.1.0"
 authors = ["Joe Loach <joe.gloach@gmail.com>"]
+resolver = "2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-# window / rendering
-miniquad = "=0.3.0-alpha.37"
-# gui
-egui = "0.15.0"
-egui-miniquad = "0.7.0"
-glam = "0.20.1"
+pixels = "0.8.0"
+ultraviolet = "0.8.1"
+winit = "0.26"
+
+# web deps
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wgpu = { version = "0.11", features = ["webgl"] }
+wasm-bindgen = "0.2.78"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
+
+# native deps
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+wgpu = "0.11"
+pollster = "0.2"
