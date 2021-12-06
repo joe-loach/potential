@@ -8,22 +8,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-web = ["wgpu/webgl", "winit/web-sys"]
+web = ["wgpu/webgl"]
 
 [dependencies]
 # windowing
-winit = "0.25"
+winit = "0.26"
 # rendering
 wgpu = "0.11"
 # gui
 egui = "0.15"
 epi = "0.15"
-egui_winit_platform = "0.11.0"
+egui_winit_platform = "0.12.0"
 egui_wgpu_backend = "0.14"
 # math
 ultraviolet = "0.8.1"
 # time handling
 instant = { version = "0.1", features = [ "stdweb" ] }
+# error handling
+anyhow = "1.0.51"
+thiserror = "1.0.30"
 
 # web deps
 [target.'cfg(target_arch = "wasm32")'.dependencies]
