@@ -32,7 +32,7 @@ async fn run() {
             potential::event::run(ctx, event_loop, app)
         }
         Err(e) => {
-            eprintln!("error: {:?}", e);
+            eprintln!("failed to build potential context: {:?}", e);
         }
     }
 }
