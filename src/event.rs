@@ -8,9 +8,7 @@ use winit::{
 use crate::Context;
 
 #[allow(unused_variables)]
-pub trait EventHandler {
-    type Event;
-
+pub trait EventHandler<E = ()> {
     fn update(&mut self);
     fn draw(&mut self);
 
@@ -19,12 +17,12 @@ pub trait EventHandler {
     fn key_up(&mut self, key: VirtualKeyCode) {}
     fn key_down(&mut self, key: VirtualKeyCode) {}
 
-    fn raw_event(&mut self, event: &Event<Self::Event>) {}
+    fn raw_event(&mut self, event: &Event<E>) {}
 }
 
 pub fn run<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
 where
-    S: EventHandler<Event = E> + 'static,
+    S: EventHandler<E> + 'static,
 {
     let start_time = instant::Instant::now();
     let mut previous_frame_time = None;

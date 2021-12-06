@@ -4,8 +4,6 @@ const HEIGHT: u32 = 600;
 struct App {}
 
 impl potential::EventHandler for App {
-    type Event = ();
-
     fn update(&mut self) {}
     fn draw(&mut self) {}
 
