@@ -51,13 +51,6 @@ where
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
 
-                /// Does nothing.
-                struct DummyRepaintSignal;
-
-                impl epi::RepaintSignal for DummyRepaintSignal {
-                    fn request_repaint(&self) {}
-                }
-
                 // Begin to draw the UI frame.
                 let egui_start = instant::Instant::now();
                 ctx.egui_platform.begin_frame();
@@ -72,7 +65,13 @@ where
                     },
                     tex_allocator: &mut ctx.egui_render_pass,
                     output: &mut app_output,
-                    repaint_signal: Arc::new(DummyRepaintSignal),
+                    repaint_signal: Arc::new({
+                        struct DummyRepaintSignal;
+                        impl epi::RepaintSignal for DummyRepaintSignal {
+                            fn request_repaint(&self) {}
+                        }
+                        DummyRepaintSignal
+                    }),
                 }
                 .build();
 
