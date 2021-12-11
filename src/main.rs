@@ -1,18 +1,55 @@
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-struct App {}
+struct App {
+    selected_anchor: Anchor,
+}
+
+#[derive(PartialEq, Eq)]
+enum Anchor {
+    Visualiser,
+    Editor,
+}
 
 impl potential::EventHandler for App {
     fn update(&mut self) {}
     fn draw(&mut self) {}
 
-    fn ui(&mut self, ctx: &egui::CtxRef, _: &mut epi::Frame) {
-        egui::Window::new("Test").show(ctx, |ui| {
-            if ui.button("click").clicked() {
-                // do something
-            }
+    fn ui(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                egui::widgets::global_dark_light_mode_switch(ui);
+                ui.label("Potential");
+                ui.separator();
+
+                if ui
+                    .selectable_label(self.selected_anchor == Anchor::Visualiser, "Visualiser")
+                    .clicked()
+                {
+                    self.selected_anchor = Anchor::Visualiser;
+                    if frame.is_web() {
+                        ui.output().open_url("#visualiser");
+                    }
+                }
+                if ui
+                    .selectable_label(self.selected_anchor == Anchor::Editor, "Editor")
+                    .clicked()
+                {
+                    self.selected_anchor = Anchor::Editor;
+                    if frame.is_web() {
+                        ui.output().open_url("#editor");
+                    }
+                }
+            })
         });
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        App {
+            selected_anchor: Anchor::Visualiser,
+        }
     }
 }
 
@@ -25,7 +62,7 @@ async fn run() {
 
     match builder.build().await {
         Ok((event_loop, ctx)) => {
-            let app = App {};
+            let app = App::default();
 
             potential::event::run(ctx, event_loop, app)
         }
