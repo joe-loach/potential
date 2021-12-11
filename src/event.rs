@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 use winit::{
     event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -24,6 +24,7 @@ pub fn run<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
 where
     S: EventHandler<E> + 'static,
 {
+    let repaint_signal = Arc::new(RepaintSignal(Default::default()));
     let start_time = instant::Instant::now();
     let mut previous_frame_time = None;
     event_loop.run(move |event, _, control_flow| {
@@ -64,13 +65,7 @@ where
                     },
                     tex_allocator: &mut ctx.egui_render_pass,
                     output: &mut app_output,
-                    repaint_signal: Arc::new({
-                        struct DummyRepaintSignal;
-                        impl epi::RepaintSignal for DummyRepaintSignal {
-                            fn request_repaint(&self) {}
-                        }
-                        DummyRepaintSignal
-                    }),
+                    repaint_signal: Arc::clone(&repaint_signal) as _,
                 }
                 .build();
 
@@ -166,5 +161,23 @@ where
             .and_then(|w| w.location().hash().ok())
             .unwrap_or_else(|| String::from(""));
         Some(epi::WebInfo { web_location_hash })
+    }
+}
+
+struct RepaintSignal(AtomicBool);
+
+impl RepaintSignal {
+    pub fn clear(&self) {
+        self.0.swap(false, Ordering::SeqCst);
+    }
+
+    pub fn request(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
+
+impl epi::RepaintSignal for RepaintSignal {
+    fn request_repaint(&self) {
+        self.request();
     }
 }
