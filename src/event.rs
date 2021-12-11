@@ -50,15 +50,14 @@ where
                 let output_view = output_frame
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
-
                 // Begin to draw the UI frame.
                 let egui_start = instant::Instant::now();
                 ctx.egui_platform.begin_frame();
                 let mut app_output = epi::backend::AppOutput::default();
                 let mut frame = epi::backend::FrameBuilder {
                     info: epi::IntegrationInfo {
-                        name: "",
-                        web_info: None,
+                        name: "potential",
+                        web_info: web_info(),
                         cpu_usage: previous_frame_time,
                         native_pixels_per_point: Some(ctx.window.scale_factor() as _),
                         prefer_dark_mode: None,
@@ -154,5 +153,18 @@ where
             },
             _ => (),
         }
-    })
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn web_info() -> Option<epi::WebInfo> {
+        None
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn web_info() -> Option<epi::WebInfo> {
+        let web_location_hash = web_sys::window()
+            .and_then(|w| w.location().hash().ok())
+            .unwrap_or_else(|| String::from(""));
+        Some(epi::WebInfo { web_location_hash })
+    }
 }
