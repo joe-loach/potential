@@ -8,7 +8,7 @@ use crate::Context;
 #[allow(unused_variables)]
 pub trait EventHandler<E = ()> {
     fn update(&mut self);
-    fn draw(&mut self);
+    fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView);
 
     fn ui(&mut self, ctx: &egui::CtxRef) {}
 
@@ -59,6 +59,7 @@ where
                     .create_view(&wgpu::TextureViewDescriptor::default());
 
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
+                state.draw(&mut encoder, &view);
 
                 // Submit the commands.
                 ctx.queue.submit(std::iter::once(encoder.finish()));
@@ -99,7 +100,7 @@ where
 fn egui_render<F>(
     ctx: &mut Context,
     encoder: &mut wgpu::CommandEncoder,
-    view: &wgpu::TextureView,
+    target: &wgpu::TextureView,
     ui: F,
 ) where
     F: FnOnce(&egui::CtxRef),
@@ -126,17 +127,13 @@ fn egui_render<F>(
         physical_height: ctx.surface_config.height,
         scale_factor: ctx.window.scale_factor() as f32,
     };
-    pass.update_texture(
-        &ctx.device,
-        &ctx.queue,
-        &platform.context().texture(),
-    );
+    pass.update_texture(&ctx.device, &ctx.queue, &platform.context().texture());
     pass.update_user_textures(&ctx.device, &ctx.queue);
     pass.update_buffers(&ctx.device, &ctx.queue, &paint_jobs, &screen_descriptor);
 
     pass.execute(
         encoder,
-        &view,
+        &target,
         &paint_jobs,
         &screen_descriptor,
         Some(wgpu::Color::BLACK),

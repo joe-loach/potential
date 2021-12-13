@@ -23,7 +23,10 @@ enum Page {
 
 impl potential::EventHandler for App {
     fn update(&mut self) {}
-    fn draw(&mut self) {}
+
+    fn draw(&mut self, _encoder: &mut wgpu::CommandEncoder, _target: &wgpu::TextureView) {
+        // draw potentials when on the correct page
+    }
 
     fn ui(&mut self, ctx: &egui::CtxRef) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
