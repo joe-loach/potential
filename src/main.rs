@@ -15,7 +15,7 @@ impl potential::EventHandler for App {
     fn update(&mut self) {}
     fn draw(&mut self) {}
 
-    fn ui(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame) {
+    fn ui(&mut self, ctx: &egui::CtxRef) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
@@ -27,7 +27,7 @@ impl potential::EventHandler for App {
                     .clicked()
                 {
                     self.selected_anchor = Anchor::Visualiser;
-                    if frame.is_web() {
+                    if cfg!(target_arch = "wasm32") {
                         ui.output().open_url("#visualiser");
                     }
                 }
@@ -36,7 +36,7 @@ impl potential::EventHandler for App {
                     .clicked()
                 {
                     self.selected_anchor = Anchor::Editor;
-                    if frame.is_web() {
+                    if cfg!(target_arch = "wasm32") {
                         ui.output().open_url("#editor");
                     }
                 }

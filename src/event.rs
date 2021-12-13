@@ -1,5 +1,3 @@
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
-
 use winit::{
     event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -12,7 +10,7 @@ pub trait EventHandler<E = ()> {
     fn update(&mut self);
     fn draw(&mut self);
 
-    fn ui(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame) {}
+    fn ui(&mut self, ctx: &egui::CtxRef) {}
 
     fn key_up(&mut self, key: VirtualKeyCode) {}
     fn key_down(&mut self, key: VirtualKeyCode) {}
@@ -24,9 +22,8 @@ pub fn run<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
 where
     S: EventHandler<E> + 'static,
 {
-    let repaint_signal = Arc::new(RepaintSignal(Default::default()));
-    let start_time = instant::Instant::now();
-    let mut previous_frame_time = None;
+    let start = instant::Instant::now();
+
     event_loop.run(move |event, _, control_flow| {
         state.raw_event(&event);
         ctx.egui_platform.handle_event(&event);
@@ -38,88 +35,35 @@ where
             } if window_id == ctx.window.id() => *control_flow = ControlFlow::Exit,
 
             event::Event::RedrawRequested(_) => {
-                ctx.egui_platform
-                    .update_time(start_time.elapsed().as_secs_f64());
+                ctx.egui_platform.update_time(start.elapsed().as_secs_f64());
 
-                let output_frame = match ctx.surface.get_current_texture() {
-                    Ok(frame) => frame,
-                    Err(e) => {
-                        eprintln!("Dropped frame with error: {}", e);
-                        return;
-                    }
-                };
-                let output_view = output_frame
+                let frame = ctx
+                    .surface
+                    .get_current_texture()
+                    .or_else(|e| {
+                        if let wgpu::SurfaceError::Outdated = e {
+                            // TODO: reconfigure surface here
+                            ctx.surface.get_current_texture()
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .unwrap();
+
+                let mut encoder = ctx
+                    .device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+
+                let view = frame
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
-                // Begin to draw the UI frame.
-                let egui_start = instant::Instant::now();
-                ctx.egui_platform.begin_frame();
-                let mut app_output = epi::backend::AppOutput::default();
-                let mut frame = epi::backend::FrameBuilder {
-                    info: epi::IntegrationInfo {
-                        name: "potential",
-                        web_info: web_info(),
-                        cpu_usage: previous_frame_time,
-                        native_pixels_per_point: Some(ctx.window.scale_factor() as _),
-                        prefer_dark_mode: None,
-                    },
-                    tex_allocator: &mut ctx.egui_render_pass,
-                    output: &mut app_output,
-                    repaint_signal: Arc::clone(&repaint_signal) as _,
-                }
-                .build();
 
-                // Draw the demo application.
-                state.ui(&ctx.egui_platform.context(), &mut frame);
+                egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
 
-                // End the UI frame. We could now handle the output and draw the UI with the backend.
-                let (_output, paint_commands) = ctx.egui_platform.end_frame(Some(&ctx.window));
-                let paint_jobs = ctx.egui_platform.context().tessellate(paint_commands);
-
-                let frame_time = egui_start.elapsed().as_secs_f64() as f32;
-                previous_frame_time = Some(frame_time);
-
-                let mut encoder =
-                    ctx.device
-                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("encoder"),
-                        });
-
-                // Upload all resources for the GPU.
-                let screen_descriptor = egui_wgpu_backend::ScreenDescriptor {
-                    physical_width: ctx.surface_config.width,
-                    physical_height: ctx.surface_config.height,
-                    scale_factor: ctx.window.scale_factor() as f32,
-                };
-                ctx.egui_render_pass.update_texture(
-                    &ctx.device,
-                    &ctx.queue,
-                    &ctx.egui_platform.context().texture(),
-                );
-                ctx.egui_render_pass
-                    .update_user_textures(&ctx.device, &ctx.queue);
-                ctx.egui_render_pass.update_buffers(
-                    &ctx.device,
-                    &ctx.queue,
-                    &paint_jobs,
-                    &screen_descriptor,
-                );
-
-                // Record all render passes.
-                ctx.egui_render_pass
-                    .execute(
-                        &mut encoder,
-                        &output_view,
-                        &paint_jobs,
-                        &screen_descriptor,
-                        Some(wgpu::Color::BLACK),
-                    )
-                    .unwrap();
                 // Submit the commands.
                 ctx.queue.submit(std::iter::once(encoder.finish()));
 
-                // Redraw egui
-                output_frame.present();
+                frame.present();
             }
 
             event::Event::MainEventsCleared => {
@@ -149,35 +93,53 @@ where
             _ => (),
         }
     });
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn web_info() -> Option<epi::WebInfo> {
-        None
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn web_info() -> Option<epi::WebInfo> {
-        let web_location_hash = web_sys::window()
-            .and_then(|w| w.location().hash().ok())
-            .unwrap_or_else(|| String::from(""));
-        Some(epi::WebInfo { web_location_hash })
-    }
 }
 
-struct RepaintSignal(AtomicBool);
+/// Computes and renders **egui** to the [`wgpu::TextureView`].
+fn egui_render<F>(
+    ctx: &mut Context,
+    encoder: &mut wgpu::CommandEncoder,
+    view: &wgpu::TextureView,
+    ui: F,
+) where
+    F: FnOnce(&egui::CtxRef),
+{
+    let platform = &mut ctx.egui_platform;
+    let pass = &mut ctx.egui_render_pass;
 
-impl RepaintSignal {
-    pub fn clear(&self) {
-        self.0.swap(false, Ordering::SeqCst);
+    let (output, paint_commands) = {
+        platform.begin_frame();
+        ui(&platform.context()); // create the UI
+        platform.end_frame(Some(&ctx.window))
+    };
+
+    // handle the egui's frame output
+    // TODO: handle more *stuff*
+    if let Some(url) = output.open_url {
+        crate::helper::open_url(&url.url, url.new_tab);
     }
 
-    pub fn request(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-}
+    let paint_jobs = platform.context().tessellate(paint_commands);
 
-impl epi::RepaintSignal for RepaintSignal {
-    fn request_repaint(&self) {
-        self.request();
-    }
+    let screen_descriptor = egui_wgpu_backend::ScreenDescriptor {
+        physical_width: ctx.surface_config.width,
+        physical_height: ctx.surface_config.height,
+        scale_factor: ctx.window.scale_factor() as f32,
+    };
+    pass.update_texture(
+        &ctx.device,
+        &ctx.queue,
+        &platform.context().texture(),
+    );
+    pass.update_user_textures(&ctx.device, &ctx.queue);
+    pass.update_buffers(&ctx.device, &ctx.queue, &paint_jobs, &screen_descriptor);
+
+    pass.execute(
+        encoder,
+        &view,
+        &paint_jobs,
+        &screen_descriptor,
+        Some(wgpu::Color::BLACK),
+    )
+    .unwrap();
 }

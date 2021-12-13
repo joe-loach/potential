@@ -944,7 +944,6 @@ dependencies = [
  "egui",
  "egui_wgpu_backend",
  "egui_winit_platform",
- "epi",
  "instant",
  "pollster",
  "thiserror",
