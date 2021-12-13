@@ -1,12 +1,22 @@
+use potential::Context;
+
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 struct App {
-    selected_anchor: Anchor,
+    page: Page,
+}
+
+impl App {
+    pub fn new(_ctx: &mut Context) -> Self {
+        App {
+            page: Page::Visualiser,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq)]
-enum Anchor {
+enum Page {
     Visualiser,
     Editor,
 }
@@ -23,19 +33,19 @@ impl potential::EventHandler for App {
                 ui.separator();
 
                 if ui
-                    .selectable_label(self.selected_anchor == Anchor::Visualiser, "Visualiser")
+                    .selectable_label(self.page == Page::Visualiser, "Visualiser")
                     .clicked()
                 {
-                    self.selected_anchor = Anchor::Visualiser;
+                    self.page = Page::Visualiser;
                     if cfg!(target_arch = "wasm32") {
                         ui.output().open_url("#visualiser");
                     }
                 }
                 if ui
-                    .selectable_label(self.selected_anchor == Anchor::Editor, "Editor")
+                    .selectable_label(self.page == Page::Editor, "Editor")
                     .clicked()
                 {
-                    self.selected_anchor = Anchor::Editor;
+                    self.page = Page::Editor;
                     if cfg!(target_arch = "wasm32") {
                         ui.output().open_url("#editor");
                     }
@@ -45,24 +55,16 @@ impl potential::EventHandler for App {
     }
 }
 
-impl Default for App {
-    fn default() -> Self {
-        App {
-            selected_anchor: Anchor::Visualiser,
-        }
-    }
-}
-
 async fn run() {
-    let builder = potential::Context::builder()
+    let builder = Context::builder()
         .title("Potential")
         .width(WIDTH)
         .height(HEIGHT)
         .fullscreen(cfg!(target_arch = "wasm32")); // fullscreen for wasm
 
     match builder.build().await {
-        Ok((event_loop, ctx)) => {
-            let app = App::default();
+        Ok((event_loop, mut ctx)) => {
+            let app = App::new(&mut ctx);
 
             potential::event::run(ctx, event_loop, app)
         }
