@@ -42,7 +42,7 @@ where
                     .get_current_texture()
                     .or_else(|e| {
                         if let wgpu::SurfaceError::Outdated = e {
-                            // TODO: reconfigure surface here
+                            ctx.surface.configure(&ctx.device, &ctx.surface_config);
                             ctx.surface.get_current_texture()
                         } else {
                             Err(e)
