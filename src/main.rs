@@ -5,12 +5,14 @@ const HEIGHT: u32 = 600;
 
 struct App {
     page: Page,
+    editor_text: String,
 }
 
 impl App {
     pub fn new(_ctx: &mut Context) -> Self {
         App {
             page: Page::Visualiser,
+            editor_text: String::new(),
         }
     }
 }
@@ -25,7 +27,9 @@ impl potential::EventHandler for App {
     fn update(&mut self) {}
 
     fn draw(&mut self, _encoder: &mut wgpu::CommandEncoder, _target: &wgpu::TextureView) {
-        // draw potentials when on the correct page
+        if self.page == Page::Visualiser {
+            // draw
+        }
     }
 
     fn ui(&mut self, ctx: &egui::CtxRef) {
@@ -55,6 +59,30 @@ impl potential::EventHandler for App {
                 }
             })
         });
+
+        if self.page == Page::Editor {
+            egui::TopBottomPanel::bottom("editor_bottom").show(ctx, |ui| {
+                let layout = egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
+                ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
+                    if ui.button("Compile").clicked() {
+                        // do something
+                    }
+                })
+            });
+
+            egui::CentralPanel::default().show(ctx, |ui| {
+                let editor = egui::TextEdit::multiline(&mut self.editor_text)
+                    .desired_width(f32::INFINITY)
+                    .desired_rows(50)
+                    .code_editor();
+
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.add(editor);
+                    })
+            });
+        }
     }
 }
 
