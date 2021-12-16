@@ -133,7 +133,7 @@ fn egui_render<F>(
 
     pass.execute(
         encoder,
-        &target,
+        target,
         &paint_jobs,
         &screen_descriptor,
         Some(wgpu::Color::BLACK),
