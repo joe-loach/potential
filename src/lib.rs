@@ -29,47 +29,49 @@ pub struct Object<'s> {
 
 impl<'o> Field<Potential> for &[Object<'o>] {
     fn at(&self, pos: uv::Vec2) -> Potential {
-        Potential(self
-            .iter()
-            .map(|o| {
-                let r = o.dist(pos);
-                if r >= 0.0 {
-                    Some(o.value / r)
-                } else {
-                    None
-                }
-            })
-            .fold(Some(0.0), |a, b| {
-                if let (Some(a), Some(b)) = (a, b) {
-                    Some(a + b)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(0.0))
+        Potential(
+            self.iter()
+                .map(|o| {
+                    let r = o.dist(pos);
+                    if r >= 0.0 {
+                        Some(o.value / r)
+                    } else {
+                        None
+                    }
+                })
+                .fold(Some(0.0), |a, b| {
+                    if let (Some(a), Some(b)) = (a, b) {
+                        Some(a + b)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(0.0),
+        )
     }
 }
 
 impl<'o> Field<Force> for &[Object<'o>] {
     fn at(&self, pos: uv::Vec2) -> Force {
-        Force(self
-            .iter()
-            .map(|o| {
-                let r = o.dist(pos);
-                if r >= 0.0 {
-                    Some(o.value / (r * r))
-                } else {
-                    None
-                }
-            })
-            .fold(Some(0.0), |a, b| {
-                if let (Some(a), Some(b)) = (a, b) {
-                    Some(a + b)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(0.0))
+        Force(
+            self.iter()
+                .map(|o| {
+                    let r = o.dist(pos);
+                    if r >= 0.0 {
+                        Some(o.value / (r * r))
+                    } else {
+                        None
+                    }
+                })
+                .fold(Some(0.0), |a, b| {
+                    if let (Some(a), Some(b)) = (a, b) {
+                        Some(a + b)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(0.0),
+        )
     }
 }
 
