@@ -3,6 +3,7 @@ mod text;
 
 pub use text::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum SyntaxKind {
     /// A whitespace character
@@ -34,5 +35,11 @@ pub enum SyntaxKind {
 }
 
 pub fn parse(text: &str) {
-    let _tokens: Vec<_> = lexer::tokenise(text).collect();
+    let tokens: Vec<_> = lexer::tokenise(text).collect();
+
+    if cfg!(debug_assertions) {
+        for it in &tokens {
+            println!("{:?}", it);
+        }
+    }
 }

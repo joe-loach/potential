@@ -50,6 +50,7 @@ impl AddAssign for TextSize {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TextRange {
     start: TextSize,
     end: TextSize,

@@ -1,5 +1,6 @@
 use super::{SyntaxKind, TextRange, TextSize};
 
+#[derive(Debug)]
 pub struct Token {
     pub kind: SyntaxKind,
     pub range: TextRange,
