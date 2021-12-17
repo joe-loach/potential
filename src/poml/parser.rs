@@ -82,7 +82,7 @@ pub mod grammar {
             }
         }
         p.expect(close);
-        m.finish(p, List);
+        m.finish(p, ParamList);
     }
 
     /// name:

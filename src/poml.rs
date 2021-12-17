@@ -35,7 +35,7 @@ pub enum SyntaxKind {
     Stmt,
     Shape,
     Object,
-    List,
+    ParamList,
     Param,
     Label,
     Name,
