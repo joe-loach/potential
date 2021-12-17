@@ -1,3 +1,5 @@
+pub mod ast;
+pub mod event;
 mod lexer;
 mod parser;
 mod text;

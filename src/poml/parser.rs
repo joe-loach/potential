@@ -1,4 +1,4 @@
-use super::SyntaxKind;
+use super::{event::Event, SyntaxKind};
 
 pub mod grammar {
     use super::SyntaxKind::*;
@@ -106,14 +106,6 @@ pub mod grammar {
     }
 }
 
-#[derive(Debug)]
-pub enum Event {
-    Start { kind: SyntaxKind },
-    Token { kind: SyntaxKind },
-    Finish,
-    Error { msg: Box<String> },
-}
-
 pub struct Parser {
     tokens: Vec<SyntaxKind>,
     pos: usize,
@@ -129,7 +121,11 @@ impl Parser {
         }
     }
 
-    pub fn start(&mut self) -> Marker {
+    pub fn finish(self) -> Vec<Event> {
+        self.events
+    }
+
+    fn start(&mut self) -> Marker {
         let pos = self.events.len() as u32;
         self.events.push(Event::Start {
             kind: SyntaxKind::Tombstone,
@@ -137,26 +133,22 @@ impl Parser {
         Marker::new(pos)
     }
 
-    pub fn finish(self) -> Vec<Event> {
-        self.events
-    }
-
-    pub fn current(&self) -> SyntaxKind {
+    fn current(&self) -> SyntaxKind {
         self.nth(0)
     }
 
-    pub fn nth(&self, n: usize) -> SyntaxKind {
+    fn nth(&self, n: usize) -> SyntaxKind {
         self.tokens
             .get(self.pos + n)
             .copied()
             .unwrap_or(SyntaxKind::Eof)
     }
 
-    pub fn at(&self, kind: SyntaxKind) -> bool {
+    fn at(&self, kind: SyntaxKind) -> bool {
         self.nth(0) == kind
     }
 
-    pub fn eat(&mut self, kind: SyntaxKind) -> bool {
+    fn eat(&mut self, kind: SyntaxKind) -> bool {
         if !self.at(kind) {
             return false;
         }
@@ -164,20 +156,20 @@ impl Parser {
         true
     }
 
-    pub fn bump(&mut self, kind: SyntaxKind) {
+    fn bump(&mut self, kind: SyntaxKind) {
         assert!(self.eat(kind));
     }
 
-    pub fn bump_any(&mut self) {
+    fn bump_any(&mut self) {
         self.eat(self.current());
     }
 
-    pub fn error(&mut self, msg: impl Into<String>) {
+    fn error(&mut self, msg: impl Into<String>) {
         let msg = Box::new(msg.into());
         self.events.push(Event::Error { msg });
     }
 
-    pub fn expect(&mut self, kind: SyntaxKind) -> bool {
+    fn expect(&mut self, kind: SyntaxKind) -> bool {
         if self.eat(kind) {
             return true;
         }
@@ -191,7 +183,7 @@ impl Parser {
     }
 }
 
-pub struct Marker {
+struct Marker {
     pos: u32,
 }
 
