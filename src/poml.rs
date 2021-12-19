@@ -83,16 +83,20 @@ impl rowan::Language for Poml {
     }
 }
 
-use parser::AstNode;
-
 pub type SyntaxNode = rowan::SyntaxNode<Poml>;
 pub type SyntaxToken = rowan::SyntaxToken<Poml>;
 pub type SyntaxElement = rowan::SyntaxElement<Poml>;
+
+use parser::ast::*;
 
 pub fn compile(text: &str) {
     let text = lexer::lex(text);
     let root = parser::parse(&text).root();
     for s in root.stmts() {
-        println!("{:#?}", s.syntax());
+        println!("{:#?}", s);
+        match s.kind() {
+            StmtKind::Shape(a) => {}
+            StmtKind::Object(a) => {}
+        }
     }
 }
