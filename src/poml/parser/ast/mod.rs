@@ -36,6 +36,10 @@ node!(Root, SyntaxKind::Root);
 node!(Shape, SyntaxKind::Shape);
 node!(Object, SyntaxKind::Object);
 node!(Label, SyntaxKind::Label);
+node!(Name, SyntaxKind::Name);
+node!(ParamList, SyntaxKind::ParamList);
+node!(Param, SyntaxKind::Param);
+
 
 impl Root {
     pub fn stmts(&self) -> impl Iterator<Item = Stmt> {
@@ -74,8 +78,24 @@ impl Stmt {
             .or_else(|| Object::cast(self.0.clone()).map(StmtKind::Object))
             .unwrap()
     }
+}
 
-    pub fn label(&self) -> Option<Label> {
-        self.syntax().children().find_map(Label::cast)
+impl Shape {
+    pub fn label(&self) -> Label {
+        self.syntax().children().find_map(Label::cast).unwrap()
+    }
+
+    pub fn name(&self) -> Option<Name> {
+        self.syntax().children().find_map(Name::cast)
+    }
+
+    pub fn param_list(&self) -> Option<ParamList> {
+        self.syntax().children().find_map(ParamList::cast)
+    }
+}
+
+impl ParamList {
+    pub fn params(&self) -> impl Iterator<Item = Param> {
+        self.syntax().children().filter_map(Param::cast)
     }
 }
