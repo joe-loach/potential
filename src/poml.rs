@@ -34,6 +34,7 @@ pub enum SyntaxKind {
     Object,
     ParamList,
     Param,
+    Let,
     Label,
     Name,
     Error,

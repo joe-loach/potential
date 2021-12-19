@@ -1,7 +1,7 @@
 // shapes must have a label
 
-a: circle(1.0);
-b: circle(2.0); // big circle :)
+let a: circle(1.0);
+let b: circle(2.0); // big circle :)
 
 // objects are four value tuples of
 // [value, x, y, shape]

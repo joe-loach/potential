@@ -81,6 +81,10 @@ impl<'t> Parser<'t> {
         self.nth(0) == kind
     }
 
+    fn at_str(&self, text: &str) -> bool {
+        self.tokens.text(self.pos).map(|t| t == text).unwrap_or(false)
+    }
+
     fn eat(&mut self, kind: SyntaxKind) -> bool {
         if !self.at(kind) {
             return false;
@@ -95,6 +99,10 @@ impl<'t> Parser<'t> {
 
     fn bump_any(&mut self) {
         self.eat(self.current());
+    }
+
+    fn bump_remap(&mut self, kind: SyntaxKind) {
+        self.do_bump(kind);
     }
 
     fn error(&mut self, msg: impl Into<String>) {

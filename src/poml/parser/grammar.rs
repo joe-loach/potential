@@ -14,7 +14,7 @@ pub(super) fn root(p: &mut Parser) {
         let m = p.start();
         let kind = match p.current() {
             OpenSquare => object(p),
-            Ident => shape(p),
+            Ident if p.at_str("let") => shape(p),
             _ => {
                 p.bump_any();
                 m.finish(p, Error);
@@ -27,9 +27,10 @@ pub(super) fn root(p: &mut Parser) {
     m.finish(p, Root);
 }
 
-/// Id
+/// let label name list
 fn shape(p: &mut Parser) -> SyntaxKind {
     assert!(p.at(Ident));
+    p.bump_remap(Let);
     label(p);
     name(p);
     if p.at(OpenRound) {
@@ -84,12 +85,10 @@ fn list(p: &mut Parser, brack: Brackets) {
 
 /// name:
 fn label(p: &mut Parser) {
-    if let (Ident, Colon) = (p.nth(0), p.nth(1)) {
-        let m = p.start();
-        name(p);
-        p.bump(Colon);
-        m.finish(p, Label);
-    }
+    let m = p.start();
+    name(p);
+    p.bump(Colon);
+    m.finish(p, Label);
 }
 
 fn name(p: &mut Parser) {
