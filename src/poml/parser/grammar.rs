@@ -87,7 +87,7 @@ fn list(p: &mut Parser, brack: Brackets) {
 fn label(p: &mut Parser) {
     let m = p.start();
     name(p);
-    p.bump(Colon);
+    p.expect(Colon);
     m.finish(p, Label);
 }
 
