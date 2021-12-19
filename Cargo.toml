@@ -26,6 +26,8 @@ instant = { version = "0.1", features = [ "stdweb" ] }
 # error handling
 anyhow = "1.0.51"
 thiserror = "1.0.30"
+# poml helpers
+rowan = "0.15"
 
 # web deps
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -65,7 +65,7 @@ impl potential::EventHandler for App {
                 let layout = egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
                 ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
                     if ui.button("Compile").clicked() {
-                        potential::poml::parse(&self.editor_text);
+                        potential::poml::compile(&self.editor_text);
                     }
                 })
             });

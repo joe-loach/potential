@@ -1,12 +1,10 @@
-// items have an optional label, as long as it isn't a taken kw
-c: circle (1.0);
-// if you don't give the shape a name, you can reference it by index
-// however the index can be used even if you give the shape a name
-circle(2.0); // big circle :)
+// shapes must have a label
+
+a: circle(1.0);
+b: circle(2.0); // big circle :)
 
 // objects are four value tuples of
 // [value, x, y, shape]
-o: [1.0, 1.0, 1.0, c];
-// they also don't need a label
-// also, i used the index of the big circle for this object's shape
-[4.0, -1.0, -1.0, 1];
+[1.0, 1.0, 1.0, a];
+[1.0, 2.0, 1.0, a];
+[4.0, -1.0, -1.0, b];

@@ -1,4 +1,6 @@
-use super::{SyntaxKind, TextRange, TextSize};
+use super::SyntaxKind;
+
+use rowan::TextRange;
 
 #[derive(Debug)]
 pub struct Token {
@@ -6,14 +8,78 @@ pub struct Token {
     pub range: TextRange,
 }
 
-impl Token {
-    pub fn new(kind: SyntaxKind, range: TextRange) -> Self {
-        Self { kind, range }
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Trivia {
+    Keep,
+    Skip,
+}
+
+pub struct Tokens<'t> {
+    pub source: &'t str,
+    tokens: &'t [Token],
+    idxs: Vec<usize>,
+}
+
+impl<'t> Tokens<'t> {
+    pub fn get(&self, n: usize) -> Option<&Token> {
+        let i = *self.idxs.get(n)?;
+        Some(&self.tokens[i])
+    }
+
+    pub fn kind(&self, n: usize) -> SyntaxKind {
+        self.get(n).map(|t| t.kind).unwrap_or(SyntaxKind::Eof)
+    }
+
+    pub fn text(&self, n: usize) -> Option<&str> {
+        let t = self.get(n)?;
+        Some(&self.source[t.range])
+    }
+
+    pub fn len(&self) -> usize {
+        self.tokens.len()
     }
 }
 
-pub fn tokenise(mut text: &str) -> impl Iterator<Item = Token> + '_ {
-    return std::iter::from_fn({
+pub struct LexedStr<'t> {
+    source: &'t str,
+    tokens: Vec<Token>,
+}
+
+impl<'t> LexedStr<'t> {
+    pub const fn new(source: &'t str, tokens: Vec<Token>) -> Self {
+        Self { source, tokens }
+    }
+
+    pub fn tokens(&self, trivia: Trivia) -> Tokens {
+        let idxs: Vec<usize> = if trivia == Trivia::Skip {
+            self.tokens
+                .iter()
+                .enumerate()
+                .filter_map(
+                    |(i, tok)| {
+                        if !tok.kind.is_trivia() {
+                            Some(i)
+                        } else {
+                            None
+                        }
+                    },
+                )
+                .collect()
+        } else {
+            (0..self.tokens.len()).collect()
+        };
+
+        Tokens {
+            source: self.source,
+            tokens: &self.tokens,
+            idxs,
+        }
+    }
+}
+
+pub fn lex(mut text: &str) -> LexedStr {
+    let source = text;
+    let tokens = std::iter::from_fn({
         let mut pos = 0.into();
         move || {
             if text.is_empty() {
@@ -21,19 +87,23 @@ pub fn tokenise(mut text: &str) -> impl Iterator<Item = Token> + '_ {
                 return None;
             }
             // make the next token
-            let (kind, len) = next(text);
-            let tok = Token::new(kind, TextRange::at(pos, len));
+            let (kind, len) = {
+                let mut c = Cursor::new(text);
+                (c.next(), c.ate.into())
+            };
+            let tok = Token {
+                kind,
+                range: TextRange::at(pos, len),
+            };
             // remove the lexed text
             text = &text[len.try_into().unwrap()..];
             pos += len;
             Some(tok)
         }
-    });
+    })
+    .collect();
 
-    fn next(text: &str) -> (SyntaxKind, TextSize) {
-        let mut c = Cursor::new(text);
-        (c.next(), c.ate.into())
-    }
+    LexedStr::new(source, tokens)
 }
 
 use std::{iter::Peekable, str::Chars};
