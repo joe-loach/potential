@@ -35,6 +35,7 @@ macro_rules! node {
 node!(Root, SyntaxKind::Root);
 node!(Shape, SyntaxKind::Shape);
 node!(Object, SyntaxKind::Object);
+node!(Value, SyntaxKind::Value);
 node!(Label, SyntaxKind::Label);
 node!(Name, SyntaxKind::Name);
 node!(ParamList, SyntaxKind::ParamList);
