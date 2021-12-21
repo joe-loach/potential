@@ -27,7 +27,7 @@ pub(super) fn root(p: &mut Parser) {
     m.finish(p, Root);
 }
 
-/// let label name list
+/// let label name (list)
 fn shape(p: &mut Parser) -> SyntaxKind {
     assert!(p.at(Ident));
     p.bump_remap(Let);
@@ -39,7 +39,7 @@ fn shape(p: &mut Parser) -> SyntaxKind {
     Shape
 }
 
-/// [Lit, Lit, Lit, Lit/Name]
+/// [list]
 fn object(p: &mut Parser) -> SyntaxKind {
     assert!(p.at(OpenSquare));
     list(p, Brackets::Square);
