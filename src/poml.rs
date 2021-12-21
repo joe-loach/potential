@@ -88,16 +88,31 @@ pub type SyntaxNode = rowan::SyntaxNode<Poml>;
 pub type SyntaxToken = rowan::SyntaxToken<Poml>;
 pub type SyntaxElement = rowan::SyntaxElement<Poml>;
 
-use parser::ast::*;
-
 pub fn compile(text: &str) {
-    let text = lexer::lex(text);
-    let root = parser::parse(&text).root();
-    for s in root.stmts() {
-        println!("{:#?}", s);
-        match s.kind() {
-            StmtKind::Shape(a) => {}
-            StmtKind::Object(a) => {}
+    let (text, mut errors) = lexer::lex(text);
+
+    let mut parse = parser::parse(&text);
+    let root = parse.root();
+    parse.validate();
+    errors.extend(parse.errors);
+
+    if !errors.is_empty() {
+        println!("Errors");
+        for e in &errors {
+            println!("{}", e);
         }
+    }
+
+    use parser::ast::*;
+
+    for s in root.stmts() {
+        // if let Some(list) = s.params() {
+        //     for p in list {
+        //         match p.kind() {
+        //             ParamKind::Name(n) => println!("name {:?}", n.text()),
+        //             ParamKind::Value(v) => println!("value {:?}", v.value()),
+        //         }
+        //     }
+        // }
     }
 }

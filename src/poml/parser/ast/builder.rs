@@ -7,6 +7,7 @@ use crate::poml::lexer::Tokens;
 pub struct TreeBuilder<'t> {
     tokens: Tokens<'t>,
     inner: rowan::GreenNodeBuilder<'static>,
+    errors: Vec<String>,
     state: State,
     pos: usize,
 }
@@ -21,13 +22,14 @@ impl<'t> TreeBuilder<'t> {
     pub fn new(tokens: Tokens<'t>) -> Self {
         Self {
             tokens,
+            errors: Vec::new(),
             inner: rowan::GreenNodeBuilder::new(),
             state: State::PendingStart,
             pos: 0,
         }
     }
 
-    pub fn finish(mut self) -> rowan::GreenNode {
+    pub fn finish(mut self) -> (rowan::GreenNode, Vec<String>) {
         match mem::replace(&mut self.state, State::Normal) {
             State::PendingFinish => {
                 self.eat_trivias();
@@ -36,7 +38,7 @@ impl<'t> TreeBuilder<'t> {
             State::PendingStart | State::Normal => unreachable!(),
         }
 
-        self.inner.finish()
+        (self.inner.finish(), self.errors)
     }
 
     pub fn token(&mut self, kind: SyntaxKind) {
@@ -67,8 +69,7 @@ impl<'t> TreeBuilder<'t> {
     }
 
     pub fn error(&mut self, error: String) {
-        // let text_pos = self.lexed.text_start(self.pos).try_into().unwrap();
-        // self.inner.error(error, text_pos);
+        self.errors.push(error);
     }
 
     pub fn eat_trivias(&mut self) {

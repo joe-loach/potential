@@ -16,6 +16,7 @@ pub(super) fn root(p: &mut Parser) {
             OpenSquare => object(p),
             Ident if p.at_str("let") => shape(p),
             _ => {
+                p.error("Expected to find a statement");
                 p.bump_any();
                 m.finish(p, Error);
                 continue;

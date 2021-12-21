@@ -77,8 +77,9 @@ impl<'t> LexedStr<'t> {
     }
 }
 
-pub fn lex(mut text: &str) -> LexedStr {
+pub fn lex(mut text: &str) -> (LexedStr, Vec<String>) {
     let source = text;
+    let mut errors = Vec::new();
     let tokens = std::iter::from_fn({
         let mut pos = 0.into();
         move || {
@@ -101,9 +102,17 @@ pub fn lex(mut text: &str) -> LexedStr {
             Some(tok)
         }
     })
+    .inspect(|tok| {
+        if tok.kind == SyntaxKind::Unknown {
+            errors.push(format!(
+                "Unknown token '{}' in token stream",
+                &source[tok.range]
+            ));
+        }
+    })
     .collect();
 
-    LexedStr::new(source, tokens)
+    (LexedStr::new(source, tokens), errors)
 }
 
 use std::{iter::Peekable, str::Chars};
