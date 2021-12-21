@@ -41,10 +41,7 @@ pub fn parse(text: &LexedStr) -> Parse {
     let mut builder = ast::TreeBuilder::new(text.tokens(Trivia::Keep));
     event::process(&mut builder, events);
     let (node, errors) = builder.finish();
-    Parse {
-        node,
-        errors,
-    }
+    Parse { node, errors }
 }
 
 struct Parser<'t> {
@@ -87,7 +84,10 @@ impl<'t> Parser<'t> {
     }
 
     fn at_str(&self, text: &str) -> bool {
-        self.tokens.text(self.pos).map(|t| t == text).unwrap_or(false)
+        self.tokens
+            .text(self.pos)
+            .map(|t| t == text)
+            .unwrap_or(false)
     }
 
     fn eat(&mut self, kind: SyntaxKind) -> bool {
