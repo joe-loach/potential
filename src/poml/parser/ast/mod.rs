@@ -59,7 +59,8 @@ pub enum StmtKind {
 impl AstNode for Stmt {
     fn cast(node: SyntaxNode) -> Option<Self>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         if Shape::cast(node.clone()).is_some() || Object::cast(node.clone()).is_some() {
             Some(Stmt(node))
         } else {
