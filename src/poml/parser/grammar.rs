@@ -56,7 +56,7 @@ fn list(p: &mut Parser, brack: Brackets) {
             }
             Literal => {
                 let m = p.start();
-                p.bump(Literal);
+                value(p);
                 m.finish(p, Param);
             }
             _ => return false,
@@ -99,4 +99,11 @@ fn name(p: &mut Parser) {
     } else {
         p.error("Expected to find a name");
     }
+}
+
+fn value(p: &mut Parser) {
+    assert!(p.at(Literal));
+    let m = p.start();
+    p.bump(Literal);
+    m.finish(p, Value);
 }

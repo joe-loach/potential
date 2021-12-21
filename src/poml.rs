@@ -36,6 +36,7 @@ pub enum SyntaxKind {
     Param,
     Let,
     Label,
+    Value,
     Name,
     Error,
 
