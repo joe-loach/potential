@@ -85,16 +85,17 @@ impl App {
                             let y = params.next_value().unwrap();
                             let label = params.next_name().unwrap();
                             // use the transformation map to get the index for the shape
-                            let index = *self.program.map.get(&label.text()).unwrap();
-                            // create the object with the cloned store
-                            let object = Object::new(
-                                value.value(),
-                                uv::Vec2::new(x.value(), y.value()),
-                                index,
-                                Rc::clone(&self.program.shapes),
-                            );
-                            // add the object to the list
-                            self.program.objects.push(object);
+                            if let Some(&index) = self.program.map.get(&label.text()) {
+                                // create the object with the cloned store
+                                let object = Object::new(
+                                    value.value(),
+                                    uv::Vec2::new(x.value(), y.value()),
+                                    index,
+                                    Rc::clone(&self.program.shapes),
+                                );
+                                // add the object to the list
+                                self.program.objects.push(object);
+                            }
                         }
                         _ => (),
                     }
