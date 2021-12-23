@@ -25,6 +25,7 @@ struct App {
     page: Page,
     editor_text: String,
     recompiled: bool,
+    mouse: uv::Vec2,
 }
 
 impl App {
@@ -39,6 +40,7 @@ impl App {
             page: Page::Visualiser,
             editor_text: String::new(),
             recompiled: false,
+            mouse: uv::Vec2::zero(),
         }
     }
 
@@ -188,58 +190,75 @@ impl potential::EventHandler for App {
             })
         });
 
-        if self.page == Page::Editor {
-            egui::TopBottomPanel::bottom("editor_bottom").show(ctx, |ui| {
-                let layout = egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
-                ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
-                    if ui.button("Compile").clicked() {
-                        self.compile();
-                    }
-                })
-            });
-
-            egui::CentralPanel::default().show(ctx, |ui| {
-                egui::SidePanel::right("overview_panel")
-                    .min_width(300.0)
-                    .show_inside(ui, |ui| {
-                        ui.heading("Objects");
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            for (i, obj) in self.program.objects.iter().enumerate() {
-                                let shape_name = {
-                                    let i = self
-                                        .program
-                                        .map
-                                        .values()
-                                        .position(|&x| x == obj.shape)
-                                        .unwrap();
-                                    self.program.map.keys().nth(i).unwrap().clone()
-                                };
-                                egui::CollapsingHeader::new(i.to_string())
-                                    .default_open(true)
-                                    .show(ui, |ui| {
-                                        ui.monospace(format!("shape: {}", shape_name));
-                                        ui.monospace(format!("value: {}", obj.value));
-                                        ui.monospace(format!(
-                                            "pos: {{ x: {}, y: {} }}",
-                                            obj.pos.x, obj.pos.y
-                                        ));
-                                    });
-                            }
-                        });
-                    });
-
-                let editor = egui::TextEdit::multiline(&mut self.editor_text)
-                    .desired_width(f32::INFINITY)
-                    .desired_rows(50)
-                    .code_editor();
-
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        ui.add(editor);
+        match self.page {
+            Page::Editor => {
+                egui::TopBottomPanel::bottom("editor_bottom").show(ctx, |ui| {
+                    let layout =
+                        egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
+                    ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
+                        if ui.button("Compile").clicked() {
+                            self.compile();
+                        }
                     })
-            });
+                });
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    egui::SidePanel::right("overview_panel")
+                        .min_width(300.0)
+                        .show_inside(ui, |ui| {
+                            ui.heading("Objects");
+                            egui::ScrollArea::vertical().show(ui, |ui| {
+                                for (i, obj) in self.program.objects.iter().enumerate() {
+                                    let shape_name = {
+                                        let i = self
+                                            .program
+                                            .map
+                                            .values()
+                                            .position(|&x| x == obj.shape)
+                                            .unwrap();
+                                        self.program.map.keys().nth(i).unwrap().clone()
+                                    };
+                                    egui::CollapsingHeader::new(i.to_string())
+                                        .default_open(true)
+                                        .show(ui, |ui| {
+                                            ui.monospace(format!("shape: {}", shape_name));
+                                            ui.monospace(format!("value: {}", obj.value));
+                                            ui.monospace(format!(
+                                                "pos: {{ x: {}, y: {} }}",
+                                                obj.pos.x, obj.pos.y
+                                            ));
+                                        });
+                                }
+                            });
+                        });
+
+                    let editor = egui::TextEdit::multiline(&mut self.editor_text)
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(50)
+                        .code_editor();
+
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            ui.add(editor);
+                        })
+                });
+            }
+            Page::Visualiser => {
+                egui::Window::new("Info").show(ctx, |ui| {
+                    ui.small("Under cursor");
+                    ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
+                    ui.monospace(format!("dist (m): {}", self.dist(self.mouse)));
+                    ui.monospace(format!("potential (J/C): {}", self.potential(self.mouse).0));
+                    ui.monospace(format!("force (N/C): {}", self.force(self.mouse).0));
+                });
+            }
         }
+    }
+
+    fn mouse_moved(&mut self, x: f64, y: f64) {
+        let pos = uv::Vec2::new(x as f32, y as f32);
+        self.mouse = (pos * 2.0 / self.height as f32) + uv::Vec2::new(-1.0, -1.0);
     }
 }
 

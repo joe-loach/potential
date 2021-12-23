@@ -15,6 +15,8 @@ pub trait EventHandler<E = ()> {
     fn key_up(&mut self, key: VirtualKeyCode) {}
     fn key_down(&mut self, key: VirtualKeyCode) {}
 
+    fn mouse_moved(&mut self, x: f64, y: f64) {}
+
     fn raw_event(&mut self, event: &Event<E>) {}
 }
 
@@ -79,6 +81,12 @@ where
                     ctx.surface_config.width = size.width;
                     ctx.surface_config.height = size.height;
                     ctx.surface.configure(&ctx.device, &ctx.surface_config);
+                }
+                event::WindowEvent::CursorMoved {
+                    position,
+                    ..
+                } => {
+                    state.mouse_moved(position.x, position.y);
                 }
                 event::WindowEvent::KeyboardInput {
                     input:
