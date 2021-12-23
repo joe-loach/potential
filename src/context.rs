@@ -75,6 +75,7 @@ impl ContextBuilder {
         let window = {
             let size = LogicalSize::new(width, height);
             let builder = WindowBuilder::new()
+                .with_visible(false)
                 .with_title(title)
                 .with_inner_size(size)
                 .with_fullscreen(if fullscreen {

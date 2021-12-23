@@ -22,6 +22,7 @@ pub fn run<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
 where
     S: EventHandler<E> + 'static,
 {
+    ctx.window.set_visible(true);
     let start = instant::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
