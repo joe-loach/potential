@@ -1,5 +1,9 @@
 extern crate ultraviolet as uv;
 
+mod axis;
+
+pub use axis::*;
+
 use std::{collections::HashMap, rc::Rc};
 
 use potential::{
@@ -26,6 +30,8 @@ struct App {
     editor_text: String,
     recompiled: bool,
     mouse: uv::Vec2,
+    x_axis: Axis,
+    y_axis: Axis,
 }
 
 impl App {
@@ -41,6 +47,8 @@ impl App {
             editor_text: String::new(),
             recompiled: false,
             mouse: uv::Vec2::zero(),
+            x_axis: Axis::new(-1.0, 1.0),
+            y_axis: Axis::new(-1.0, 1.0),
         }
     }
 
@@ -136,6 +144,20 @@ impl App {
 
     pub fn force(&self, pos: uv::Vec2) -> Force {
         self.program.objects.as_slice().at(pos)
+    }
+
+    fn map_pos(&self, pos: uv::Vec2) -> uv::Vec2 {
+        // [0, a]
+        // [0, 1]       (/a)
+        // [0, c-b]     (*(c-b))
+        // [b, c]       + b
+        fn map(x: f32, a: f32, b: f32, c: f32) -> f32 {
+            (x / a) * (c-b) + b
+        }
+        let uv::Vec2 { x, y } = pos;
+        let x = map(x, self.width as f32, self.x_axis.min(), self.x_axis.max());
+        let y = map(y, self.height as f32, self.y_axis.max(), self.y_axis.min());
+        uv::Vec2::new(x, y)
     }
 }
 
@@ -258,7 +280,7 @@ impl potential::EventHandler for App {
 
     fn mouse_moved(&mut self, x: f64, y: f64) {
         let pos = uv::Vec2::new(x as f32, y as f32);
-        self.mouse = (pos * 2.0 / self.height as f32) + uv::Vec2::new(-1.0, -1.0);
+        self.mouse = self.map_pos(pos);
     }
 }
 
