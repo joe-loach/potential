@@ -166,6 +166,27 @@ impl potential::EventHandler for App {
             });
 
             egui::CentralPanel::default().show(ctx, |ui| {
+                egui::SidePanel::right("overview_panel")
+                    .min_width(300.0)
+                    .show_inside(ui, |ui| {
+                        ui.heading("Objects");
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            for (i, obj) in self.program.objects.iter().enumerate() {
+                                let shape_name = {
+                                    let i = self.program.map.values().position(|&x| x == obj.shape).unwrap();
+                                    self.program.map.keys().nth(i).unwrap().clone()
+                                };
+                                egui::CollapsingHeader::new(i.to_string())
+                                    .default_open(true)
+                                    .show(ui, |ui| {
+                                        ui.monospace(format!("shape: {}", shape_name));
+                                        ui.monospace(format!("value: {}", obj.value));
+                                        ui.monospace(format!("pos: {{ x: {}, y: {} }}", obj.pos.x, obj.pos.y));
+                                    });
+                            }
+                        });
+                    });
+
                 let editor = egui::TextEdit::multiline(&mut self.editor_text)
                     .desired_width(f32::INFINITY)
                     .desired_rows(50)

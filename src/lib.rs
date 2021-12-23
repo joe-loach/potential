@@ -27,9 +27,9 @@ pub trait Field<T> {
 }
 
 pub struct Object {
-    value: f32,
-    pos: uv::Vec2,
-    shape: Index<Box<dyn Sdf>>,
+    pub value: f32,
+    pub pos: uv::Vec2,
+    pub shape: Index<Box<dyn Sdf>>,
     store: Rc<Store<Box<dyn Sdf>>>,
 }
 

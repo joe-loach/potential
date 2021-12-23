@@ -9,6 +9,12 @@ impl<T> Clone for Index<T> {
 }
 impl<T> Copy for Index<T> {}
 
+impl<T> PartialEq for Index<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
 pub struct Store<T> {
     items: Vec<T>,
 }
