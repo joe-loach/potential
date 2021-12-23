@@ -82,10 +82,7 @@ where
                     ctx.surface_config.height = size.height;
                     ctx.surface.configure(&ctx.device, &ctx.surface_config);
                 }
-                event::WindowEvent::CursorMoved {
-                    position,
-                    ..
-                } => {
+                event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_moved(position.x, position.y);
                 }
                 event::WindowEvent::KeyboardInput {
