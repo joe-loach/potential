@@ -16,7 +16,6 @@ use super::{
 
 pub struct Parse {
     node: GreenNode,
-    pub errors: Vec<String>,
 }
 
 impl Parse {
@@ -27,21 +26,16 @@ impl Parse {
     pub fn root(&self) -> Root {
         Root::cast(self.syntax()).unwrap()
     }
-
-    pub fn validate(&mut self) {
-        let errors = ast::validate(&self.syntax());
-        self.errors.extend(errors);
-    }
 }
 
-pub fn parse(text: &LexedStr) -> Parse {
+pub fn parse(text: &LexedStr) -> (Parse, Vec<String>) {
     let mut parser = Parser::new(text.tokens(Trivia::Skip));
     grammar::root(&mut parser);
     let events = parser.finish();
     let mut builder = ast::TreeBuilder::new(text.tokens(Trivia::Keep));
     event::process(&mut builder, events);
     let (node, errors) = builder.finish();
-    Parse { node, errors }
+    (Parse { node }, errors)
 }
 
 struct Parser<'t> {

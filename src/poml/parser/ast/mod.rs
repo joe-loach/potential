@@ -82,7 +82,7 @@ impl Stmt {
             .unwrap()
     }
 
-    pub fn params(&self) -> Option<impl Iterator<Item = Param>> {
+    pub fn params(&self) -> Option<Params> {
         let list = self.syntax().children().find_map(ParamList::cast)?;
         Some(list.params())
     }
@@ -99,8 +99,45 @@ impl Shape {
 }
 
 impl ParamList {
-    fn params(&self) -> impl Iterator<Item = Param> {
-        self.syntax().children().filter_map(Param::cast)
+    fn params(&self) -> Params {
+        Params::new(self.syntax().children().filter_map(Param::cast))
+    }
+}
+
+pub struct Params {
+    iter: Box<dyn Iterator<Item = Param>>,
+}
+
+impl Params {
+    fn new(iter: impl Iterator<Item = Param> + 'static) -> Self {
+        let iter = Box::new(iter);
+        Self { iter }
+    }
+
+    pub fn values(self) -> impl Iterator<Item = Value> {
+        self.iter.filter_map(|p| p.kind().try_into_value().ok())
+    }
+
+    pub fn next_value(&mut self) -> Option<Value> {
+        self.iter
+            .next()
+            .map(|p| p.kind())
+            .and_then(|p| p.try_into_value().ok())
+    }
+    
+    pub fn next_name(&mut self) -> Option<Name> {
+        self.iter
+            .next()
+            .map(|p| p.kind())
+            .and_then(|p| p.try_into_name().ok())
+    }
+}
+
+impl Iterator for Params {
+    type Item = Param;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 
@@ -108,6 +145,40 @@ impl ParamList {
 pub enum ParamKind {
     Name(Name),
     Value(Value),
+}
+
+impl ParamKind {
+    pub fn as_name(&self) -> Option<&Name> {
+        if let Self::Name(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_value(&self) -> Option<&Value> {
+        if let Self::Value(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn try_into_name(self) -> Result<Name, Self> {
+        if let Self::Name(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    pub fn try_into_value(self) -> Result<Value, Self> {
+        if let Self::Value(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
 }
 
 impl Param {
@@ -135,30 +206,48 @@ impl AstNode for ParamKind {
     }
 }
 
-impl Name {
+impl Label {
     pub fn text(&self) -> Option<String> {
-        self.syntax().green().children().find_map(|it| {
-            it.as_token().and_then(|t| {
-                if t.kind() == SyntaxKind::Ident.into() {
-                    Some(t.text().to_string())
-                } else {
-                    None
-                }
+        self.syntax()
+            .children()
+            .find_map(Name::cast)
+            .map(|name| name.text())
+    }
+}
+
+impl Name {
+    pub fn text(&self) -> String {
+        self.syntax()
+            .green()
+            .children()
+            .find_map(|it| {
+                it.as_token().and_then(|t| {
+                    if t.kind() == SyntaxKind::Ident.into() {
+                        Some(t.text().to_string())
+                    } else {
+                        None
+                    }
+                })
             })
-        })
+            .unwrap()
     }
 }
 
 impl Value {
-    pub fn value(&self) -> Option<f32> {
-        self.syntax().green().children().find_map(|it| {
-            it.as_token().and_then(|t| {
-                if t.kind() == SyntaxKind::Literal.into() {
-                    t.text().parse::<f32>().ok()
-                } else {
-                    None
-                }
+    pub fn value(&self) -> f32 {
+        // cannot fail as the lexer will always produce parsable literals
+        self.syntax()
+            .green()
+            .children()
+            .find_map(|it| {
+                it.as_token().and_then(|t| {
+                    if t.kind() == SyntaxKind::Literal.into() {
+                        t.text().parse::<f32>().ok()
+                    } else {
+                        None
+                    }
+                })
             })
-        })
+            .unwrap()
     }
 }

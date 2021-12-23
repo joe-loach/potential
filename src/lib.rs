@@ -4,11 +4,15 @@ mod context;
 pub mod event;
 mod helper;
 pub mod poml;
-mod sdf;
+pub mod sdf;
+mod store;
+
+use std::rc::Rc;
 
 pub use context::*;
 pub use event::EventHandler;
 pub use sdf::Sdf;
+pub use store::*;
 
 /// Coulomb constant
 // const K: f32 = 8.987_552e9;
@@ -22,13 +26,30 @@ pub trait Field<T> {
     fn at(&self, pos: uv::Vec2) -> T;
 }
 
-pub struct Object<'s> {
+pub struct Object {
     value: f32,
     pos: uv::Vec2,
-    shape: &'s dyn Sdf,
+    shape: Index<Box<dyn Sdf>>,
+    store: Rc<Store<Box<dyn Sdf>>>,
 }
 
-impl<'o> Field<Potential> for &[Object<'o>] {
+impl Object {
+    pub fn new(
+        value: f32,
+        pos: uv::Vec2,
+        shape: Index<Box<dyn Sdf>>,
+        store: Rc<Store<Box<dyn Sdf>>>,
+    ) -> Self {
+        Self {
+            value,
+            pos,
+            shape,
+            store,
+        }
+    }
+}
+
+impl Field<Potential> for &[Object] {
     fn at(&self, pos: uv::Vec2) -> Potential {
         Potential(
             self.iter()
@@ -52,7 +73,7 @@ impl<'o> Field<Potential> for &[Object<'o>] {
     }
 }
 
-impl<'o> Field<Force> for &[Object<'o>] {
+impl Field<Force> for &[Object] {
     fn at(&self, pos: uv::Vec2) -> Force {
         Force(
             self.iter()
@@ -76,9 +97,11 @@ impl<'o> Field<Force> for &[Object<'o>] {
     }
 }
 
-impl Sdf for Object<'_> {
+impl Sdf for Object {
     #[inline]
     fn dist(&self, p: uv::Vec2) -> f32 {
-        self.shape.dist(p - self.pos)
+        //todo!(); //self.shape.dist(p - self.pos)
+        let shape = self.store.get(&self.shape);
+        shape.dist(p - self.pos)
     }
 }

@@ -1,18 +1,108 @@
-use potential::Context;
+extern crate ultraviolet as uv;
+
+use std::{collections::HashMap, rc::Rc};
+
+use potential::{
+    poml::{parser::ast, Registry},
+    Context, Index, Object, Sdf, Store,
+};
+
+#[derive(Default)]
+pub struct Program {
+    map: HashMap<String, Index<Box<dyn Sdf>>>,
+    shapes: Rc<Store<Box<dyn Sdf>>>,
+    objects: Vec<Object>,
+}
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 struct App {
+    program: Program,
+    registry: Registry,
     page: Page,
     editor_text: String,
 }
 
 impl App {
     pub fn new(_ctx: &mut Context) -> Self {
+        let registry = Registry::default().register("circle", potential::sdf::Circle::new);
+
         App {
+            program: Program::default(),
+            registry,
             page: Page::Visualiser,
             editor_text: String::new(),
+        }
+    }
+
+    pub fn compile(&mut self) {
+        let parse = potential::poml::compile(&self.editor_text, &self.registry);
+
+        match parse {
+            Ok(parse) => {
+                // clear out the old information
+                self.program.map.clear();
+                self.program.objects.clear();
+                // SAFETY:
+                // * all the indexes in the map have been cleared
+                // * all the objects have been cleared so there are no other references
+                unsafe {
+                    let shapes = Rc::get_mut(&mut self.program.shapes).unwrap();
+                    shapes.clear();
+                }
+
+                let root = parse.root();
+                // Collect all shapes and their labels
+                for s in root.stmts() {
+                    let shapes =
+                        Rc::get_mut(&mut self.program.shapes).expect("no other references to cell");
+                    match s.kind() {
+                        ast::StmtKind::Shape(shape) => {
+                            // get the name and label of the shape
+                            let label = shape.label().text().unwrap();
+                            let name = shape.name().map(|n| n.text()).unwrap();
+                            // collect the parameters passed to the shape
+                            let params = s.params().unwrap().values().map(|v| v.value()).collect();
+                            // create the shape
+                            let sdf = self.registry.call(&name, params).unwrap();
+                            // add it to the list of shapes
+                            let index = shapes.push(sdf);
+                            // save the tranformation of label to index for later
+                            self.program.map.insert(label, index);
+                        }
+                        _ => (),
+                    }
+                }
+                // Collect all objects and their values
+                for s in root.stmts() {
+                    match s.kind() {
+                        ast::StmtKind::Object(_) => {
+                            let mut params = s.params().unwrap();
+                            let value = params.next_value().unwrap();
+                            let x = params.next_value().unwrap();
+                            let y = params.next_value().unwrap();
+                            let label = params.next_name().unwrap();
+                            let index = *self.program.map.get(&label.text()).unwrap();
+                            let object = Object::new(
+                                value.value(),
+                                uv::Vec2::new(x.value(), y.value()),
+                                index,
+                                Rc::clone(&self.program.shapes),
+                            );
+                            self.program.objects.push(object);
+                        }
+                        _ => (),
+                    }
+                }
+            }
+            Err(errors) => {
+                // there was an error, print it out for now
+                eprintln!("Errors");
+                for e in errors {
+                    eprintln!("{}", e);
+                }
+            }
         }
     }
 }
@@ -65,7 +155,7 @@ impl potential::EventHandler for App {
                 let layout = egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
                 ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
                     if ui.button("Compile").clicked() {
-                        potential::poml::compile(&self.editor_text);
+                        self.compile();
                     }
                 })
             });

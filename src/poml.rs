@@ -1,33 +1,23 @@
 mod lexer;
-mod parser;
+pub mod parser;
+mod registry;
 
-pub fn compile(text: &str) {
+pub use parser::{AstNode, Parse};
+pub use registry::Registry;
+
+pub fn compile(text: &str, registry: &Registry) -> Result<Parse, Vec<String>> {
     let (text, mut errors) = lexer::lex(text);
 
-    let mut parse = parser::parse(&text);
-    let root = parse.root();
-    parse.validate();
-    errors.extend(parse.errors);
+    let (parse, parse_errors) = parser::parse(&text);
+    errors.extend(parse_errors);
+    let validation_errors = parser::ast::validate(&parse.syntax(), registry);
+    errors.extend(validation_errors);
 
     if !errors.is_empty() {
-        println!("Errors");
-        for e in &errors {
-            println!("{}", e);
-        }
+        return Err(errors);
     }
 
-    use parser::ast::*;
-
-    for s in root.stmts() {
-        // if let Some(list) = s.params() {
-        //     for p in list {
-        //         match p.kind() {
-        //             ParamKind::Name(n) => println!("name {:?}", n.text()),
-        //             ParamKind::Value(v) => println!("value {:?}", v.value()),
-        //         }
-        //     }
-        // }
-    }
+    Ok(parse)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
