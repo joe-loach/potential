@@ -23,6 +23,14 @@ impl Context {
     pub fn builder() -> ContextBuilder {
         ContextBuilder::new()
     }
+
+    pub fn width(&self) -> u32 {
+        self.surface_config.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.surface_config.height
+    }
 }
 
 pub struct ContextBuilder {

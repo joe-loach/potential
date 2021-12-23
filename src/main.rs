@@ -4,7 +4,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use potential::{
     poml::{parser::ast, Registry},
-    Context, Index, Object, Sdf, Store,
+    Context, Field, Force, Index, Object, Potential, Sdf, Store,
 };
 
 #[derive(Default)]
@@ -18,10 +18,13 @@ const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 struct App {
+    width: u32,
+    height: u32,
     program: Program,
     registry: Registry,
     page: Page,
     editor_text: String,
+    recompiled: bool,
 }
 
 impl App {
@@ -29,10 +32,13 @@ impl App {
         let registry = Registry::default().register("circle", potential::sdf::Circle::new);
 
         App {
+            width: WIDTH,
+            height: HEIGHT,
             program: Program::default(),
             registry,
             page: Page::Visualiser,
             editor_text: String::new(),
+            recompiled: false,
         }
     }
 
@@ -100,6 +106,7 @@ impl App {
                         _ => (),
                     }
                 }
+                self.recompiled = true;
             }
             Err(errors) => {
                 // there was an error, print it out for now
@@ -112,6 +119,24 @@ impl App {
     }
 }
 
+impl App {
+    pub fn dist(&self, pos: uv::Vec2) -> f32 {
+        let mut d = f32::INFINITY;
+        for sdf in self.program.shapes.iter() {
+            d = d.min(sdf.dist(pos));
+        }
+        d
+    }
+
+    pub fn potential(&self, pos: uv::Vec2) -> Potential {
+        self.program.objects.as_slice().at(pos)
+    }
+
+    pub fn force(&self, pos: uv::Vec2) -> Force {
+        self.program.objects.as_slice().at(pos)
+    }
+}
+
 #[derive(PartialEq, Eq)]
 enum Page {
     Visualiser,
@@ -119,7 +144,15 @@ enum Page {
 }
 
 impl potential::EventHandler for App {
-    fn update(&mut self) {}
+    fn update(&mut self, ctx: &Context) {
+        self.width = ctx.width();
+        self.height = ctx.height();
+
+        if self.recompiled {
+            println!("Recompiled");
+            self.recompiled = false;
+        }
+    }
 
     fn draw(&mut self, _encoder: &mut wgpu::CommandEncoder, _target: &wgpu::TextureView) {
         if self.page == Page::Visualiser {

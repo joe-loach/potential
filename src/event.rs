@@ -7,7 +7,7 @@ use crate::Context;
 
 #[allow(unused_variables)]
 pub trait EventHandler<E = ()> {
-    fn update(&mut self);
+    fn update(&mut self, ctx: &Context);
     fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView);
 
     fn ui(&mut self, ctx: &egui::CtxRef) {}
@@ -60,6 +60,8 @@ where
                     .create_view(&wgpu::TextureViewDescriptor::default());
 
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
+
+                state.update(&ctx);
                 state.draw(&mut encoder, &view);
 
                 // Submit the commands.
