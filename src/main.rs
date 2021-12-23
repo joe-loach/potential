@@ -68,7 +68,7 @@ impl App {
                             let sdf = self.registry.call(&name, params).unwrap();
                             // add it to the list of shapes
                             let index = shapes.push(sdf);
-                            // save the tranformation of label to index for later
+                            // save the transformation of label to index for later
                             self.program.map.insert(label, index);
                         }
                         _ => (),
@@ -78,18 +78,22 @@ impl App {
                 for s in root.stmts() {
                     match s.kind() {
                         ast::StmtKind::Object(_) => {
+                            // get all of the parameters for the object
                             let mut params = s.params().unwrap();
                             let value = params.next_value().unwrap();
                             let x = params.next_value().unwrap();
                             let y = params.next_value().unwrap();
                             let label = params.next_name().unwrap();
+                            // use the transformation map to get the index for the shape
                             let index = *self.program.map.get(&label.text()).unwrap();
+                            // create the object with the cloned store
                             let object = Object::new(
                                 value.value(),
                                 uv::Vec2::new(x.value(), y.value()),
                                 index,
                                 Rc::clone(&self.program.shapes),
                             );
+                            // add the object to the list
                             self.program.objects.push(object);
                         }
                         _ => (),
