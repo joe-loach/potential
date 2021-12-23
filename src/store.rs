@@ -38,6 +38,10 @@ impl<T> Store<T> {
     pub unsafe fn clear(&mut self) {
         self.items.clear();
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items.iter()
+    }
 }
 
 impl<T> Default for Store<T> {
