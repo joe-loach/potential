@@ -245,7 +245,7 @@ impl potential::EventHandler for App {
                 });
             }
             Page::Visualiser => {
-                egui::Window::new("Info").show(ctx, |ui| {
+                egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
                     ui.monospace(format!("dist (m): {}", self.dist(self.mouse)));
