@@ -10,10 +10,9 @@ Potential is an **interactive field visualizer** built in [Rust][rust-homepage].
 
 ## Things to do
 
+- [ ] Show axis
 - [ ] Zooming and panning around the scene
 - [x] Placing objects in the scene
-- [ ] Moving objects around with the cursor
-- [ ] Changing properties of an object with an "on click" menu
 - [x] Show potential at the position of the cursor
 - [ ] Show field lines
 - [ ] Show equipotential lines
