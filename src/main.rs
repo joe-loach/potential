@@ -152,7 +152,7 @@ impl App {
         // [0, c-b]     (*(c-b))
         // [b, c]       + b
         fn map(x: f32, a: f32, b: f32, c: f32) -> f32 {
-            (x / a) * (c-b) + b
+            (x / a) * (c - b) + b
         }
         let uv::Vec2 { x, y } = pos;
         let x = map(x, self.width as f32, self.x_axis.min(), self.x_axis.max());
