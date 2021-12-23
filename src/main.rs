@@ -173,7 +173,12 @@ impl potential::EventHandler for App {
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             for (i, obj) in self.program.objects.iter().enumerate() {
                                 let shape_name = {
-                                    let i = self.program.map.values().position(|&x| x == obj.shape).unwrap();
+                                    let i = self
+                                        .program
+                                        .map
+                                        .values()
+                                        .position(|&x| x == obj.shape)
+                                        .unwrap();
                                     self.program.map.keys().nth(i).unwrap().clone()
                                 };
                                 egui::CollapsingHeader::new(i.to_string())
@@ -181,7 +186,10 @@ impl potential::EventHandler for App {
                                     .show(ui, |ui| {
                                         ui.monospace(format!("shape: {}", shape_name));
                                         ui.monospace(format!("value: {}", obj.value));
-                                        ui.monospace(format!("pos: {{ x: {}, y: {} }}", obj.pos.x, obj.pos.y));
+                                        ui.monospace(format!(
+                                            "pos: {{ x: {}, y: {} }}",
+                                            obj.pos.x, obj.pos.y
+                                        ));
                                     });
                             }
                         });

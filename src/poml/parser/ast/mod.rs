@@ -124,7 +124,7 @@ impl Params {
             .map(|p| p.kind())
             .and_then(|p| p.try_into_value().ok())
     }
-    
+
     pub fn next_name(&mut self) -> Option<Name> {
         self.iter
             .next()
