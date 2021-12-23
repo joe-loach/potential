@@ -70,24 +70,26 @@ impl App {
 
                 let root = parse.root();
                 // Collect all shapes and their labels
-                for s in root.stmts() {
+                {
                     let shapes =
                         Rc::get_mut(&mut self.program.shapes).expect("no other references to cell");
-                    match s.kind() {
-                        ast::StmtKind::Shape(shape) => {
-                            // get the name and label of the shape
-                            let label = shape.label().text().unwrap();
-                            let name = shape.name().map(|n| n.text()).unwrap();
-                            // collect the parameters passed to the shape
-                            let params = s.params().unwrap().values().map(|v| v.value()).collect();
-                            // create the shape
-                            let sdf = self.registry.call(&name, params).unwrap();
-                            // add it to the list of shapes
-                            let index = shapes.push(sdf);
-                            // save the transformation of label to index for later
-                            self.program.map.insert(label, index);
+                    for s in root.stmts() {
+                        match s.kind() {
+                            ast::StmtKind::Shape(shape) => {
+                                // get the name and label of the shape
+                                let label = shape.label().text().unwrap();
+                                let name = shape.name().map(|n| n.text()).unwrap();
+                                // collect the parameters passed to the shape
+                                let params = s.params().unwrap().values().map(|v| v.value()).collect();
+                                // create the shape
+                                let sdf = self.registry.call(&name, params).unwrap();
+                                // add it to the list of shapes
+                                let index = shapes.push(sdf);
+                                // save the transformation of label to index for later
+                                self.program.map.insert(label, index);
+                            }
+                            _ => (),
                         }
-                        _ => (),
                     }
                 }
                 // Collect all objects and their values
