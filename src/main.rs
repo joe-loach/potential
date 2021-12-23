@@ -124,8 +124,8 @@ impl App {
 impl App {
     pub fn dist(&self, pos: uv::Vec2) -> f32 {
         let mut d = f32::INFINITY;
-        for sdf in self.program.shapes.iter() {
-            d = d.min(sdf.dist(pos));
+        for obj in self.program.objects.iter() {
+            d = d.min(obj.dist(pos));
         }
         d
     }
