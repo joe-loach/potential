@@ -16,6 +16,7 @@ pub trait EventHandler<E = ()> {
     fn key_down(&mut self, key: VirtualKeyCode) {}
 
     fn mouse_moved(&mut self, x: f64, y: f64) {}
+    fn wheel_moved(&mut self, x: f32, y: f32) {}
 
     fn raw_event(&mut self, event: &Event<E>) {}
 }
@@ -84,6 +85,11 @@ where
                 }
                 event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_moved(position.x, position.y);
+                }
+                event::WindowEvent::MouseWheel { delta, .. } => {
+                    if let event::MouseScrollDelta::LineDelta(x, y) = delta {
+                        state.wheel_moved(x, y)
+                    }
                 }
                 event::WindowEvent::KeyboardInput {
                     input:
