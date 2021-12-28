@@ -34,6 +34,7 @@ impl<T> Store<T> {
         self.items.get(index.0).unwrap()
     }
 
+    /// # Safety
     /// Must uphold that all indexes to the store are deleted
     pub unsafe fn clear(&mut self) {
         self.items.clear();

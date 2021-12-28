@@ -213,7 +213,7 @@ impl<'a> Cursor<'a> {
         }
         // keep eating the number
         self.eat_while(|c| matches!(c, '0'..='9' | '_'));
-        if !(first == '.') {
+        if first != '.' {
             // there might be a decimal point
             if let Some('.') = self.peek() {
                 self.eat(); // eat the '.'

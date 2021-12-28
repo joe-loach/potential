@@ -76,49 +76,43 @@ impl App {
                     let shapes =
                         Rc::get_mut(&mut self.program.shapes).expect("no other references to cell");
                     for s in root.stmts() {
-                        match s.kind() {
-                            ast::StmtKind::Shape(shape) => {
-                                // get the name and label of the shape
-                                let label = shape.label().text().unwrap();
-                                let name = shape.name().map(|n| n.text()).unwrap();
-                                // collect the parameters passed to the shape
-                                let params =
-                                    s.params().unwrap().values().map(|v| v.value()).collect();
-                                // create the shape
-                                let sdf = self.registry.call(&name, params).unwrap();
-                                // add it to the list of shapes
-                                let index = shapes.push(sdf);
-                                // save the transformation of label to index for later
-                                self.program.map.insert(label, index);
-                            }
-                            _ => (),
+                        if let ast::StmtKind::Shape(shape) = s.kind() {
+                            // get the name and label of the shape
+                            let label = shape.label().text().unwrap();
+                            let name = shape.name().map(|n| n.text()).unwrap();
+                            // collect the parameters passed to the shape
+                            let params =
+                                s.params().unwrap().values().map(|v| v.value()).collect();
+                            // create the shape
+                            let sdf = self.registry.call(&name, params).unwrap();
+                            // add it to the list of shapes
+                            let index = shapes.push(sdf);
+                            // save the transformation of label to index for later
+                            self.program.map.insert(label, index);
                         }
                     }
                 }
                 // Collect all objects and their values
                 for s in root.stmts() {
-                    match s.kind() {
-                        ast::StmtKind::Object(_) => {
-                            // get all of the parameters for the object
-                            let mut params = s.params().unwrap();
-                            let value = params.next_value().unwrap();
-                            let x = params.next_value().unwrap();
-                            let y = params.next_value().unwrap();
-                            let label = params.next_name().unwrap();
-                            // use the transformation map to get the index for the shape
-                            if let Some(index) = self.program.map.get(&label.text()) {
-                                let shape = self.program.shapes.get(index);
-                                // create the object
-                                let object = Object::new(
-                                    value.value(),
-                                    uv::Vec2::new(x.value(), y.value()),
-                                    *shape,
-                                );
-                                // add the object to the list
-                                self.program.objects.push(object);
-                            }
+                    if let ast::StmtKind::Object(_) = s.kind() {
+                        // get all of the parameters for the object
+                        let mut params = s.params().unwrap();
+                        let value = params.next_value().unwrap();
+                        let x = params.next_value().unwrap();
+                        let y = params.next_value().unwrap();
+                        let label = params.next_name().unwrap();
+                        // use the transformation map to get the index for the shape
+                        if let Some(index) = self.program.map.get(&label.text()) {
+                            let shape = self.program.shapes.get(index);
+                            // create the object
+                            let object = Object::new(
+                                value.value(),
+                                uv::Vec2::new(x.value(), y.value()),
+                                *shape,
+                            );
+                            // add the object to the list
+                            self.program.objects.push(object);
                         }
-                        _ => (),
                     }
                 }
                 self.recompiled = true;

@@ -92,7 +92,7 @@ impl Field<Force> for &[Object] {
                     (Some(a), Some(b)) => Some(a + b),
                     _ => None,
                 })
-                .unwrap_or(uv::Vec2::zero()),
+                .unwrap_or_else(uv::Vec2::zero),
         )
     }
 }
