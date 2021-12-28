@@ -211,7 +211,7 @@ impl potential::EventHandler for App {
 
                 ui.with_layout(egui::Layout::right_to_left(), |ui| {
                     if ui.button("🔧").on_hover_text("Settings").clicked() {
-                        self.settings_open = true;
+                        self.settings_open = !self.settings_open;
                     }
                 })
             })
