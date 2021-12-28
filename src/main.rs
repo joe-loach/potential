@@ -32,11 +32,12 @@ struct App {
     mouse: uv::Vec2,
     x_axis: Axis,
     y_axis: Axis,
+    settings_open: bool,
 }
 
 impl App {
     pub fn new(_ctx: &mut Context) -> Self {
-        let registry = Registry::default().register("circle", potential::sdf::Circle::new);
+        let registry = Registry::default().register("circle", potential::shapes::circle);
 
         App {
             width: WIDTH,
@@ -49,6 +50,7 @@ impl App {
             mouse: uv::Vec2::zero(),
             x_axis: Axis::new(-1.0, 1.0),
             y_axis: Axis::new(-1.0, 1.0),
+            settings_open: false,
         }
     }
 
@@ -80,7 +82,8 @@ impl App {
                                 let label = shape.label().text().unwrap();
                                 let name = shape.name().map(|n| n.text()).unwrap();
                                 // collect the parameters passed to the shape
-                                let params = s.params().unwrap().values().map(|v| v.value()).collect();
+                                let params =
+                                    s.params().unwrap().values().map(|v| v.value()).collect();
                                 // create the shape
                                 let sdf = self.registry.call(&name, params).unwrap();
                                 // add it to the list of shapes
@@ -211,8 +214,43 @@ impl potential::EventHandler for App {
                         ui.output().open_url("#editor");
                     }
                 }
+
+                ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                    if ui.button("🔧").on_hover_text("Settings").clicked() {
+                        self.settings_open = true;
+                    }
+                })
             })
         });
+
+        egui::Window::new("Settings")
+            .open(&mut self.settings_open)
+            .show(ctx, |ui| {
+                ui.label("X axis");
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::DragValue::new(&mut self.x_axis.min)
+                            .clamp_range(-f32::INFINITY..=self.x_axis.max),
+                    );
+                    ui.label("≤ X ≤");
+                    ui.add(
+                        egui::DragValue::new(&mut self.x_axis.max)
+                            .clamp_range(self.x_axis.min..=f32::INFINITY),
+                    );
+                });
+                ui.label("Y axis");
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::DragValue::new(&mut self.y_axis.min)
+                            .clamp_range(-f32::INFINITY..=self.y_axis.max),
+                    );
+                    ui.label("≤ Y ≤");
+                    ui.add(
+                        egui::DragValue::new(&mut self.y_axis.max)
+                            .clamp_range(self.y_axis.min..=f32::INFINITY),
+                    );
+                });
+            });
 
         match self.page {
             Page::Editor => {
