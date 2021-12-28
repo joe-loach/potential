@@ -132,7 +132,7 @@ impl App {
     pub fn dist(&self, pos: uv::Vec2) -> f32 {
         let mut d = f32::INFINITY;
         for obj in self.program.objects.iter() {
-            d = d.min(obj.at(pos).0);
+            d = d.min(*obj.at(pos));
         }
         d
     }
@@ -295,8 +295,8 @@ impl potential::EventHandler for App {
                 egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    let v = self.potential(self.mouse).0;
-                    let e = self.force(self.mouse).0;
+                    let v = self.potential(self.mouse);
+                    let e = self.force(self.mouse);
                     ui.monospace(format!("distance (m): {}", self.dist(self.mouse)));
                     ui.monospace(format!("potential (J/C): {{{}, {}}}", v.x, v.y));
                     ui.monospace(format!("force (N/C): {{{}, {}}}", e.x, e.y));

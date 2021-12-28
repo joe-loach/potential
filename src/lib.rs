@@ -17,9 +17,32 @@ pub use store::*;
 /// Gravitational constant
 // const G: f32 = 6.674_302e-11;
 
-pub struct Potential(pub uv::Vec2);
-pub struct Force(pub uv::Vec2);
-pub struct Distance(pub f32);
+pub struct Potential(uv::Vec2);
+impl std::ops::Deref for Potential {
+    type Target = uv::Vec2;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct Force(uv::Vec2);
+impl std::ops::Deref for Force {
+    type Target = uv::Vec2;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct Distance(f32);
+impl std::ops::Deref for Distance {
+    type Target = f32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+} 
 
 pub trait Field<T> {
     fn at(&self, pos: uv::Vec2) -> T;
