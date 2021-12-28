@@ -4,14 +4,12 @@ mod context;
 pub mod event;
 mod helper;
 pub mod poml;
-pub mod sdf;
+pub mod shapes;
 mod store;
-
-use std::rc::Rc;
 
 pub use context::*;
 pub use event::EventHandler;
-pub use sdf::Sdf;
+pub use shapes::Shape;
 pub use store::*;
 
 /// Coulomb constant
@@ -19,8 +17,9 @@ pub use store::*;
 /// Gravitational constant
 // const G: f32 = 6.674_302e-11;
 
-pub struct Potential(pub f32);
-pub struct Force(pub f32);
+pub struct Potential(pub uv::Vec2);
+pub struct Force(pub uv::Vec2);
+pub struct Distance(pub f32);
 
 pub trait Field<T> {
     fn at(&self, pos: uv::Vec2) -> T;
@@ -29,47 +28,50 @@ pub trait Field<T> {
 pub struct Object {
     pub value: f32,
     pub pos: uv::Vec2,
-    pub shape: Index<Box<dyn Sdf>>,
-    store: Rc<Store<Box<dyn Sdf>>>,
+    pub shape: Shape,
 }
 
 impl Object {
-    pub fn new(
-        value: f32,
-        pos: uv::Vec2,
-        shape: Index<Box<dyn Sdf>>,
-        store: Rc<Store<Box<dyn Sdf>>>,
-    ) -> Self {
-        Self {
-            value,
-            pos,
-            shape,
-            store,
-        }
+    pub fn new(value: f32, pos: uv::Vec2, shape: Shape) -> Self {
+        Self { value, pos, shape }
+    }
+}
+
+impl Field<Distance> for Object {
+    fn at(&self, pos: uv::Vec2) -> Distance {
+        let pos = pos - self.pos;
+        let d = match self.shape {
+            Shape::Circle { radius } => pos.mag() - radius,
+        };
+        Distance(d)
     }
 }
 
 impl Field<Potential> for &[Object] {
     fn at(&self, pos: uv::Vec2) -> Potential {
-        Potential(
-            self.iter()
-                .map(|o| {
-                    let r = o.dist(pos);
-                    if r >= 0.0 {
-                        Some(o.value / r)
-                    } else {
-                        None
-                    }
-                })
-                .fold(Some(0.0), |a, b| {
-                    if let (Some(a), Some(b)) = (a, b) {
-                        Some(a + b)
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or(0.0),
-        )
+        let v = self
+            .iter()
+            .map(|o| {
+                let vec = pos - o.pos;
+                let r = vec.mag();
+                if o.at(pos).0 >= 0.0 {
+                    Ok(o.value * vec / (r * r))
+                } else {
+                    let r = match o.shape {
+                        Shape::Circle { radius } => radius,
+                    };
+                    Err(o.value * vec / (r * r))
+                }
+            })
+            .fold(Ok(uv::Vec2::zero()), |a, b| match (a, b) {
+                (Ok(a), Ok(b)) => Ok(a + b),
+                (Err(a), _) => Err(a),
+                (_, Err(a)) => Err(a),
+            });
+        Potential(match v {
+            Ok(v) => v,
+            Err(v) => v,
+        })
     }
 }
 
@@ -78,30 +80,19 @@ impl Field<Force> for &[Object] {
         Force(
             self.iter()
                 .map(|o| {
-                    let r = o.dist(pos);
-                    if r >= 0.0 {
-                        Some(o.value / (r * r))
+                    let vec = pos - o.pos;
+                    let r = vec.mag();
+                    if o.at(pos).0 >= 0.0 {
+                        Some(o.value * vec / (r * r * r))
                     } else {
                         None
                     }
                 })
-                .fold(Some(0.0), |a, b| {
-                    if let (Some(a), Some(b)) = (a, b) {
-                        Some(a + b)
-                    } else {
-                        None
-                    }
+                .fold(Some(uv::Vec2::zero()), |a, b| match (a, b) {
+                    (Some(a), Some(b)) => Some(a + b),
+                    _ => None,
                 })
-                .unwrap_or(0.0),
+                .unwrap_or(uv::Vec2::zero()),
         )
-    }
-}
-
-impl Sdf for Object {
-    #[inline]
-    fn dist(&self, p: uv::Vec2) -> f32 {
-        //todo!(); //self.shape.dist(p - self.pos)
-        let shape = self.store.get(&self.shape);
-        shape.dist(p - self.pos)
     }
 }

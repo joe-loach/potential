@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::Sdf;
+use crate::shapes::Shape;
 
 struct Fun {
     arity: usize,
-    handler: Box<dyn Fn(Vec<f32>) -> Box<dyn Sdf>>,
+    handler: Box<dyn Fn(Vec<f32>) -> Shape>,
 }
 
 #[derive(Default)]
@@ -13,12 +13,12 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn register<Args, S: Function<Args>>(mut self, name: &'static str, s: S) -> Self {
+    pub fn register<Args, S: ShapeConstructor<Args>>(mut self, name: &'static str, s: S) -> Self {
         self.functions.insert(
             name,
             Fun {
                 arity: S::ARITY,
-                handler: Box::new(move |mut stack| Box::new(s.call(&mut stack))),
+                handler: Box::new(move |mut stack| s.call(&mut stack)),
             },
         );
         self
@@ -32,29 +32,26 @@ impl Registry {
         self.functions.get(name).map(|f| f.arity)
     }
 
-    pub fn call(&self, name: &str, args: Vec<f32>) -> Option<Box<dyn Sdf>> {
+    pub fn call(&self, name: &str, args: Vec<f32>) -> Option<Shape> {
         self.functions.get(name).map(|f| (f.handler)(args))
     }
 }
 
-pub trait Function<Args = ()>: 'static + Copy + Send + Sync {
-    type Return: Sdf + 'static;
+pub trait ShapeConstructor<Args = ()>: 'static + Copy + Send + Sync {
     const ARITY: usize;
-    fn call(&self, stack: &mut Vec<f32>) -> Self::Return;
+    fn call(&self, stack: &mut Vec<f32>) -> Shape;
 }
 
 macro_rules! tuple_impls {
     ( $c:expr ; $( $name:ident: $t:ty ),* ) => {
-        impl<Fun, Res> Function<($($t,)*)> for Fun
+        impl<Fun> ShapeConstructor<($($t,)*)> for Fun
         where
             Fun: 'static + Copy + Send + Sync,
-            Fun: Fn($($t),*) -> Res,
-            Res: Sdf + 'static,
+            Fun: Fn($($t),*) -> Shape,
         {
-            type Return = Res;
             const ARITY: usize = $c;
             #[allow(unused_variables)]
-            fn call(&self, stack: &mut Vec<f32>) -> Self::Return {
+            fn call(&self, stack: &mut Vec<f32>) -> Shape {
                 $( let $name = stack.pop().unwrap(); )*
                 (self)($($name,)*)
             }

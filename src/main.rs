@@ -8,13 +8,13 @@ use std::{collections::HashMap, rc::Rc};
 
 use potential::{
     poml::{parser::ast, Registry},
-    Context, Field, Force, Index, Object, Potential, Sdf, Store,
+    Context, Field, Force, Index, Object, Potential, Shape, Store,
 };
 
 #[derive(Default)]
 pub struct Program {
-    map: HashMap<String, Index<Box<dyn Sdf>>>,
-    shapes: Rc<Store<Box<dyn Sdf>>>,
+    map: HashMap<String, Index<Shape>>,
+    shapes: Rc<Store<Shape>>,
     objects: Vec<Object>,
 }
 
@@ -103,13 +103,13 @@ impl App {
                             let y = params.next_value().unwrap();
                             let label = params.next_name().unwrap();
                             // use the transformation map to get the index for the shape
-                            if let Some(&index) = self.program.map.get(&label.text()) {
-                                // create the object with the cloned store
+                            if let Some(index) = self.program.map.get(&label.text()) {
+                                let shape = self.program.shapes.get(index);
+                                // create the object
                                 let object = Object::new(
                                     value.value(),
                                     uv::Vec2::new(x.value(), y.value()),
-                                    index,
-                                    Rc::clone(&self.program.shapes),
+                                    *shape,
                                 );
                                 // add the object to the list
                                 self.program.objects.push(object);
@@ -135,7 +135,7 @@ impl App {
     pub fn dist(&self, pos: uv::Vec2) -> f32 {
         let mut d = f32::INFINITY;
         for obj in self.program.objects.iter() {
-            d = d.min(obj.dist(pos));
+            d = d.min(obj.at(pos).0);
         }
         d
     }
@@ -233,19 +233,10 @@ impl potential::EventHandler for App {
                             ui.heading("Objects");
                             egui::ScrollArea::vertical().show(ui, |ui| {
                                 for (i, obj) in self.program.objects.iter().enumerate() {
-                                    let shape_name = {
-                                        let i = self
-                                            .program
-                                            .map
-                                            .values()
-                                            .position(|&x| x == obj.shape)
-                                            .unwrap();
-                                        self.program.map.keys().nth(i).unwrap().clone()
-                                    };
                                     egui::CollapsingHeader::new(i.to_string())
                                         .default_open(true)
                                         .show(ui, |ui| {
-                                            ui.monospace(format!("shape: {}", shape_name));
+                                            ui.monospace(format!("shape: {:?}", obj.shape));
                                             ui.monospace(format!("value: {}", obj.value));
                                             ui.monospace(format!(
                                                 "pos: {{ x: {}, y: {} }}",
@@ -272,9 +263,11 @@ impl potential::EventHandler for App {
                 egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    ui.monospace(format!("dist (m): {}", self.dist(self.mouse)));
-                    ui.monospace(format!("potential (J/C): {}", self.potential(self.mouse).0));
-                    ui.monospace(format!("force (N/C): {}", self.force(self.mouse).0));
+                    let v = self.potential(self.mouse).0;
+                    let e = self.force(self.mouse).0;
+                    ui.monospace(format!("distance (m): {}", self.dist(self.mouse)));
+                    ui.monospace(format!("potential (J/C): {{{}, {}}}", v.x, v.y));
+                    ui.monospace(format!("force (N/C): {{{}, {}}}", e.x, e.y));
                 });
             }
         }
