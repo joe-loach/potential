@@ -308,6 +308,20 @@ impl potential::EventHandler for App {
         let pos = uv::Vec2::new(x as f32, y as f32);
         self.mouse = self.map_pos(pos);
     }
+
+    fn wheel_moved(&mut self, _dx: f32, dy: f32) {
+        // zoom into a point
+        const ZOOM_INTENSITY: f32 = 0.1;
+        // keep delta normalised
+        let dy = dy.clamp(-1.0, 1.0);
+        let zoom = (dy * ZOOM_INTENSITY).exp();
+        // scale axis
+        self.x_axis *= zoom;
+        self.y_axis *= zoom;
+        // translate to keep mouse at the same x and y
+        self.x_axis -= self.mouse.x / zoom - self.mouse.x;
+        self.y_axis -= self.mouse.y / zoom - self.mouse.y;
+    }
 }
 
 async fn run() {
