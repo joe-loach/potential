@@ -7,7 +7,7 @@ use crate::Context;
 
 #[allow(unused_variables)]
 pub trait EventHandler<E = ()> {
-    fn update(&mut self, ctx: &Context);
+    fn update(&mut self, ctx: &Context, dt: f32);
     fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView);
 
     fn ui(&mut self, ctx: &egui::CtxRef) {}
@@ -26,6 +26,7 @@ where
     S: EventHandler<E> + 'static,
 {
     ctx.window.set_visible(true);
+    let mut last = instant::Instant::now();
     let start = instant::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
@@ -64,13 +65,16 @@ where
 
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
 
-                state.update(&ctx);
+                let current = instant::Instant::now();
+                let elapsed = current - last;
+                state.update(&ctx, elapsed.as_secs_f32());
                 state.draw(&mut encoder, &view);
 
                 // Submit the commands.
                 ctx.queue.submit(std::iter::once(encoder.finish()));
 
                 frame.present();
+                last = current;
             }
 
             event::Event::MainEventsCleared => {

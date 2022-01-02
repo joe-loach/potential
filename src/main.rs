@@ -166,7 +166,7 @@ enum Page {
 }
 
 impl potential::EventHandler for App {
-    fn update(&mut self, ctx: &Context) {
+    fn update(&mut self, ctx: &Context, _dt: f32) {
         self.width = ctx.width();
         self.height = ctx.height();
 
