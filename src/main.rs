@@ -81,8 +81,7 @@ impl App {
                             let label = shape.label().text().unwrap();
                             let name = shape.name().map(|n| n.text()).unwrap();
                             // collect the parameters passed to the shape
-                            let params =
-                                s.params().unwrap().values().map(|v| v.value()).collect();
+                            let params = s.params().unwrap().values().map(|v| v.value()).collect();
                             // create the shape
                             let sdf = self.registry.call(&name, params).unwrap();
                             // add it to the list of shapes
