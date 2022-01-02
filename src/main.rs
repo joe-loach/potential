@@ -310,6 +310,9 @@ impl potential::EventHandler for App {
     }
 
     fn wheel_moved(&mut self, _dx: f32, dy: f32) {
+        if self.page == Page::Editor {
+            return;
+        }
         // zoom into a point
         const ZOOM_INTENSITY: f32 = 0.1;
         // keep delta normalised
