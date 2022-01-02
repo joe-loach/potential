@@ -2,21 +2,11 @@ extern crate ultraviolet as uv;
 
 mod axis;
 
-pub use axis::*;
+use archie::{egui, wgpu};
+use poml::parser::ast;
 
-use std::{collections::HashMap, rc::Rc};
-
-use potential::{
-    poml::{parser::ast, Registry},
-    Context, Field, Force, Index, Object, Potential, Shape, Store,
-};
-
-#[derive(Default)]
-pub struct Program {
-    map: HashMap<String, Index<Shape>>,
-    shapes: Rc<Store<Shape>>,
-    objects: Vec<Object>,
-}
+use axis::*;
+use potential::{Field, Force, Particle, Potential};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -24,8 +14,7 @@ const HEIGHT: u32 = 600;
 struct App {
     width: u32,
     height: u32,
-    program: Program,
-    registry: Registry,
+    particles: Vec<Particle>,
     page: Page,
     editor_text: String,
     recompiled: bool,
@@ -36,14 +25,11 @@ struct App {
 }
 
 impl App {
-    pub fn new(_ctx: &mut Context) -> Self {
-        let registry = Registry::default().register("circle", potential::shapes::circle);
-
+    pub fn new(_ctx: &mut archie::Context) -> Self {
         App {
             width: WIDTH,
             height: HEIGHT,
-            program: Program::default(),
-            registry,
+            particles: Vec::new(),
             page: Page::Visualiser,
             editor_text: String::new(),
             recompiled: false,
@@ -55,62 +41,37 @@ impl App {
     }
 
     pub fn compile(&mut self) {
-        let parse = potential::poml::compile(&self.editor_text, &self.registry);
+        let parse = poml::compile(&self.editor_text);
 
         match parse {
             Ok(parse) => {
-                // clear out the old information
-                self.program.map.clear();
-                self.program.objects.clear();
-                // SAFETY:
-                // * all the indexes in the map have been cleared
-                // * all the objects have been cleared so there are no other references
-                unsafe {
-                    let shapes = Rc::get_mut(&mut self.program.shapes).unwrap();
-                    shapes.clear();
-                }
-
                 let root = parse.root();
-                // Collect all shapes and their labels
-                {
-                    let shapes =
-                        Rc::get_mut(&mut self.program.shapes).expect("no other references to cell");
-                    for s in root.stmts() {
-                        if let ast::StmtKind::Shape(shape) = s.kind() {
-                            // get the name and label of the shape
-                            let label = shape.label().text().unwrap();
-                            let name = shape.name().map(|n| n.text()).unwrap();
-                            // collect the parameters passed to the shape
-                            let params = s.params().unwrap().values().map(|v| v.value()).collect();
-                            // create the shape
-                            let sdf = self.registry.call(&name, params).unwrap();
-                            // add it to the list of shapes
-                            let index = shapes.push(sdf);
-                            // save the transformation of label to index for later
-                            self.program.map.insert(label, index);
-                        }
-                    }
-                }
-                // Collect all objects and their values
+
+                self.particles.clear();
+                let mut variables = std::collections::HashMap::new();
+
                 for s in root.stmts() {
-                    if let ast::StmtKind::Object(_) = s.kind() {
-                        // get all of the parameters for the object
-                        let mut params = s.params().unwrap();
-                        let value = params.next_value().unwrap();
-                        let x = params.next_value().unwrap();
-                        let y = params.next_value().unwrap();
-                        let label = params.next_name().unwrap();
-                        // use the transformation map to get the index for the shape
-                        if let Some(index) = self.program.map.get(&label.text()) {
-                            let shape = self.program.shapes.get(index);
-                            // create the object
-                            let object = Object::new(
-                                value.value(),
-                                uv::Vec2::new(x.value(), y.value()),
-                                *shape,
-                            );
-                            // add the object to the list
-                            self.program.objects.push(object);
+                    match s.kind() {
+                        ast::StmtKind::Shape(shape) => {
+                            if let Some(value) = shape.value().map(|v| v.value()) {
+                                let name = shape.label().text().unwrap();
+                                variables.insert(name, value);
+                            }
+                        }
+                        ast::StmtKind::Object(object) => {
+                            let mut params = object.params().unwrap();
+                            let value = params.next_value().unwrap();
+                            let x = params.next_value().unwrap();
+                            let y = params.next_value().unwrap();
+                            let label = params.next_name().unwrap();
+
+                            if let Some(&radius) = variables.get(&label.text()) {
+                                self.particles.push(Particle::new(
+                                    value.value(),
+                                    uv::Vec2::new(x.value(), y.value()),
+                                    radius,
+                                ));
+                            }
                         }
                     }
                 }
@@ -130,18 +91,18 @@ impl App {
 impl App {
     pub fn dist(&self, pos: uv::Vec2) -> f32 {
         let mut d = f32::INFINITY;
-        for obj in self.program.objects.iter() {
-            d = d.min(*obj.at(pos));
+        for p in self.particles.iter() {
+            d = d.min(*p.at(pos));
         }
         d
     }
 
     pub fn potential(&self, pos: uv::Vec2) -> Potential {
-        self.program.objects.as_slice().at(pos)
+        self.particles.as_slice().at(pos)
     }
 
     pub fn force(&self, pos: uv::Vec2) -> Force {
-        self.program.objects.as_slice().at(pos)
+        self.particles.as_slice().at(pos)
     }
 
     fn map_pos(&self, pos: uv::Vec2) -> uv::Vec2 {
@@ -165,8 +126,8 @@ enum Page {
     Editor,
 }
 
-impl potential::EventHandler for App {
-    fn update(&mut self, ctx: &Context, _dt: f32) {
+impl archie::event::EventHandler for App {
+    fn update(&mut self, ctx: &archie::Context, _dt: f32) {
         self.width = ctx.width();
         self.height = ctx.height();
 
@@ -263,11 +224,11 @@ impl potential::EventHandler for App {
                         .show_inside(ui, |ui| {
                             ui.heading("Objects");
                             egui::ScrollArea::vertical().show(ui, |ui| {
-                                for (i, obj) in self.program.objects.iter().enumerate() {
+                                for (i, obj) in self.particles.iter().enumerate() {
                                     egui::CollapsingHeader::new(i.to_string())
                                         .default_open(true)
                                         .show(ui, |ui| {
-                                            ui.monospace(format!("shape: {:?}", obj.shape));
+                                            ui.monospace(format!("radius: {:?}", obj.radius));
                                             ui.monospace(format!("value: {}", obj.value));
                                             ui.monospace(format!(
                                                 "pos: {{ x: {}, y: {} }}",
@@ -328,7 +289,7 @@ impl potential::EventHandler for App {
 }
 
 async fn run() {
-    let builder = Context::builder()
+    let builder = archie::Context::builder()
         .title("Potential")
         .width(WIDTH)
         .height(HEIGHT)
@@ -338,7 +299,7 @@ async fn run() {
         Ok((event_loop, mut ctx)) => {
             let app = App::new(&mut ctx);
 
-            potential::event::run(ctx, event_loop, app)
+            archie::event::run(ctx, event_loop, app)
         }
         Err(e) => {
             eprintln!("failed to build potential context: {:?}", e);
@@ -347,14 +308,5 @@ async fn run() {
 }
 
 fn main() {
-    #[cfg(target_arch = "wasm32")]
-    {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        wasm_bindgen_futures::spawn_local(run());
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        pollster::block_on(run());
-    }
+    archie::block_on(run());
 }

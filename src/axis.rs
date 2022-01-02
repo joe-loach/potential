@@ -10,10 +10,6 @@ impl Axis {
         Self { min, max }
     }
 
-    pub fn center(&self) -> f32 {
-        (self.max - self.min) / 2.0
-    }
-
     pub fn min(&self) -> f32 {
         self.min
     }
@@ -42,7 +38,6 @@ impl MulAssign<f32> for Axis {
         self.max *= rhs;
     }
 }
-
 
 impl Sub<f32> for Axis {
     type Output = Axis;

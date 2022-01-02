@@ -8,34 +8,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-web = ["wgpu/webgl", "web-sys/Location"]
+web = ["archie/web"]
 
 [dependencies]
-# windowing
-winit = "0.26"
-# rendering
-wgpu = "0.11"
-# gui
-egui = "0.15"
-egui_winit_platform = { version = "0.12.0", features = [ "clipboard" ]}
-egui_wgpu_backend = "0.14"
-# math
+archie = { path = "crates/archie" }
+poml = { path = "crates/poml" }
 ultraviolet = "0.8.1"
-# time handling
-instant = { version = "0.1", features = [ "stdweb" ] }
-# error handling
-anyhow = "1.0.51"
-thiserror = "1.0.30"
-# poml helpers
-rowan = "0.15"
-
-# web deps
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = "0.1.7"
-wasm-bindgen = "0.2.78"
-wasm-bindgen-futures = "0.4"
-web-sys = "0.3"
-
-# native deps
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-pollster = "0.2"

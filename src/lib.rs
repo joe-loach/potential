@@ -1,17 +1,5 @@
 extern crate ultraviolet as uv;
 
-mod context;
-pub mod event;
-mod helper;
-pub mod poml;
-pub mod shapes;
-mod store;
-
-pub use context::*;
-pub use event::EventHandler;
-pub use shapes::Shape;
-pub use store::*;
-
 /// Coulomb constant
 // const K: f32 = 8.987_552e9;
 /// Gravitational constant
@@ -42,35 +30,32 @@ impl std::ops::Deref for Distance {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
-} 
+}
 
 pub trait Field<T> {
     fn at(&self, pos: uv::Vec2) -> T;
 }
 
-pub struct Object {
+pub struct Particle {
     pub value: f32,
+    pub radius: f32,
     pub pos: uv::Vec2,
-    pub shape: Shape,
 }
 
-impl Object {
-    pub fn new(value: f32, pos: uv::Vec2, shape: Shape) -> Self {
-        Self { value, pos, shape }
+impl Particle {
+    pub fn new(value: f32, pos: uv::Vec2, radius: f32) -> Self {
+        Self { value, pos, radius }
     }
 }
 
-impl Field<Distance> for Object {
+impl Field<Distance> for Particle {
     fn at(&self, pos: uv::Vec2) -> Distance {
         let pos = pos - self.pos;
-        let d = match self.shape {
-            Shape::Circle { radius } => pos.mag() - radius,
-        };
-        Distance(d)
+        Distance(pos.mag() - self.radius)
     }
 }
 
-impl Field<Potential> for &[Object] {
+impl Field<Potential> for &[Particle] {
     fn at(&self, pos: uv::Vec2) -> Potential {
         let v = self
             .iter()
@@ -80,9 +65,7 @@ impl Field<Potential> for &[Object] {
                 if o.at(pos).0 >= 0.0 {
                     Ok(o.value * vec / (r * r))
                 } else {
-                    let r = match o.shape {
-                        Shape::Circle { radius } => radius,
-                    };
+                    let r = o.radius;
                     Err(o.value * vec / (r * r))
                 }
             })
@@ -98,7 +81,7 @@ impl Field<Potential> for &[Object] {
     }
 }
 
-impl Field<Force> for &[Object] {
+impl Field<Force> for &[Particle] {
     fn at(&self, pos: uv::Vec2) -> Force {
         Force(
             self.iter()
