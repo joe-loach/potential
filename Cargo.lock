@@ -130,7 +130,10 @@ checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 name = "builder"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_derive",
  "spirv-builder",
+ "toml",
 ]
 
 [[package]]
