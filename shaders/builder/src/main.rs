@@ -50,7 +50,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .create(true)
         .write(true)
         .truncate(true)
-        .open("shaders/shaders.toml")?;
+        .open("shaders.toml")?;
 
     write!(shader_toml, "{}", toml)?;
 
