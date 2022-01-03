@@ -12,27 +12,23 @@ pub use winit;
 use std::future::Future;
 
 pub mod log {
-    cfg_if::cfg_if! {
-        if #[cfg(web)] {
-            pub fn init() {
+    pub fn init() {
+        cfg_if::cfg_if! {
+            if #[cfg(web)] {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
                 let _ = wasm_logger::init(wasm_logger::Config::default());
-            }
-        } else {
-            pub fn init() {
+            } else {
                 let _ = env_logger::try_init();
             }
         }
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(web)] {
-        pub fn block_on(fut: impl Future<Output = ()> + 'static) {
+pub fn block_on(fut: impl Future<Output = ()> + 'static) {
+    cfg_if::cfg_if! {
+        if #[cfg(web)] {
             wasm_bindgen_futures::spawn_local(fut);
-        }
-    } else {
-        pub fn block_on(fut: impl Future<Output = ()> + 'static) {
+        } else {
             pollster::block_on(fut);
         }
     }
