@@ -10,7 +10,15 @@ edition = "2021"
 web = ["archie/web"]
 
 [dependencies]
-log = "0.4.14"
 archie = { path = "../archie" }
 poml = { path = "../poml" }
-ultraviolet = "0.8.1"
+particle = { path = "../particle" }
+common = { path = "../common" }
+# math
+glam = { version = "0.20" }
+# loggging
+log = "0.4.14"
+# error handling
+anyhow = "1.0.51"
+thiserror = "1.0.30"
+

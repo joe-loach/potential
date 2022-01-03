@@ -1,43 +1,46 @@
-extern crate ultraviolet as uv;
-
 mod axis;
+mod renderer;
 
+use anyhow::Result;
 use archie::{egui, wgpu};
+use particle::Particle;
 use poml::parser::ast;
 
 use axis::*;
-use potential::{Field, Force, Particle, Potential};
+use renderer::Renderer;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 struct App {
+    renderer: Renderer,
     width: u32,
     height: u32,
     particles: Vec<Particle>,
     page: Page,
     editor_text: String,
     recompiled: bool,
-    mouse: uv::Vec2,
+    mouse: glam::Vec2,
     x_axis: Axis,
     y_axis: Axis,
     settings_open: bool,
 }
 
 impl App {
-    pub fn new(_ctx: &mut archie::Context) -> Self {
-        App {
+    pub fn new(ctx: &mut archie::Context) -> Result<Self> {
+        Ok(App {
+            renderer: Renderer::new(ctx)?,
             width: WIDTH,
             height: HEIGHT,
             particles: Vec::new(),
             page: Page::Visualiser,
             editor_text: String::new(),
             recompiled: false,
-            mouse: uv::Vec2::zero(),
+            mouse: glam::Vec2::ZERO,
             x_axis: Axis::new(-1.0, 1.0),
             y_axis: Axis::new(-1.0, 1.0),
             settings_open: false,
-        }
+        })
     }
 
     pub fn compile(&mut self) {
@@ -68,8 +71,8 @@ impl App {
                             if let Some(&radius) = variables.get(&label.text()) {
                                 self.particles.push(Particle::new(
                                     value.value(),
-                                    uv::Vec2::new(x.value(), y.value()),
                                     radius,
+                                    glam::Vec2::new(x.value(), y.value()),
                                 ));
                             }
                         }
@@ -89,23 +92,7 @@ impl App {
 }
 
 impl App {
-    pub fn dist(&self, pos: uv::Vec2) -> f32 {
-        let mut d = f32::INFINITY;
-        for p in self.particles.iter() {
-            d = d.min(*p.at(pos));
-        }
-        d
-    }
-
-    pub fn potential(&self, pos: uv::Vec2) -> Potential {
-        self.particles.as_slice().at(pos)
-    }
-
-    pub fn force(&self, pos: uv::Vec2) -> Force {
-        self.particles.as_slice().at(pos)
-    }
-
-    fn map_pos(&self, pos: uv::Vec2) -> uv::Vec2 {
+    fn map_pos(&self, pos: glam::Vec2) -> glam::Vec2 {
         // [0, a]
         // [0, 1]       (/a)
         // [0, c-b]     (*(c-b))
@@ -113,10 +100,10 @@ impl App {
         fn map(x: f32, a: f32, b: f32, c: f32) -> f32 {
             (x / a) * (c - b) + b
         }
-        let uv::Vec2 { x, y } = pos;
+        let (x, y) = (pos.x, pos.y);
         let x = map(x, self.width as f32, self.x_axis.min(), self.x_axis.max());
         let y = map(y, self.height as f32, self.y_axis.max(), self.y_axis.min());
-        uv::Vec2::new(x, y)
+        glam::Vec2::new(x, y)
     }
 }
 
@@ -137,9 +124,9 @@ impl archie::event::EventHandler for App {
         }
     }
 
-    fn draw(&mut self, _encoder: &mut wgpu::CommandEncoder, _target: &wgpu::TextureView) {
+    fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
         if self.page == Page::Visualiser {
-            // draw
+            self.renderer.render(encoder, target)
         }
     }
 
@@ -255,18 +242,18 @@ impl archie::event::EventHandler for App {
                 egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    let v = self.potential(self.mouse);
-                    let e = self.force(self.mouse);
-                    ui.monospace(format!("distance (m): {}", self.dist(self.mouse)));
-                    ui.monospace(format!("potential (J/C): {{{}, {}}}", v.x, v.y));
-                    ui.monospace(format!("force (N/C): {{{}, {}}}", e.x, e.y));
+                    // let v = self.potential(self.mouse);
+                    // let e = self.force(self.mouse);
+                    // ui.monospace(format!("distance (m): {}", self.dist(self.mouse)));
+                    // ui.monospace(format!("potential (J/C): {{{}, {}}}", v.x, v.y));
+                    // ui.monospace(format!("force (N/C): {{{}, {}}}", e.x, e.y));
                 });
             }
         }
     }
 
     fn mouse_moved(&mut self, x: f64, y: f64) {
-        let pos = uv::Vec2::new(x as f32, y as f32);
+        let pos = glam::Vec2::new(x as f32, y as f32);
         self.mouse = self.map_pos(pos);
     }
 
@@ -297,12 +284,14 @@ async fn run() {
         .height(HEIGHT)
         .fullscreen(cfg!(target_arch = "wasm32")); // fullscreen for wasm
 
-    match builder.build().await {
-        Ok((event_loop, mut ctx)) => {
-            let app = App::new(&mut ctx);
-
-            archie::event::run(ctx, event_loop, app)
-        }
+    let features = wgpu::Features::SPIRV_SHADER_PASSTHROUGH | wgpu::Features::PUSH_CONSTANTS;
+    match builder.build(Some(features)).await {
+        Ok((event_loop, mut ctx)) => match App::new(&mut ctx) {
+            Ok(app) => archie::event::run(ctx, event_loop, app),
+            Err(e) => {
+                eprintln!("failed to make app; {:?}", e);
+            }
+        },
         Err(e) => {
             eprintln!("failed to build potential context: {:?}", e);
         }

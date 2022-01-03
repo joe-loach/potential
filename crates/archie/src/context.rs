@@ -24,6 +24,18 @@ impl Context {
         ContextBuilder::new()
     }
 
+    pub fn device(&self) -> &Device {
+        &self.device
+    }
+
+    pub fn queue(&self) -> &Queue {
+        &self.queue
+    }
+
+    pub fn surface_format(&self) -> TextureFormat {
+        self.surface_config.format
+    }
+
     pub fn width(&self) -> u32 {
         self.surface_config.width
     }
@@ -70,7 +82,10 @@ impl ContextBuilder {
 
 impl ContextBuilder {
     /// Consumes the builder and produces a [`Context`].
-    pub async fn build(self) -> Result<(EventLoop<()>, Context), BuildError> {
+    pub async fn build(
+        self,
+        features: Option<wgpu::Features>,
+    ) -> Result<(EventLoop<()>, Context), BuildError> {
         let Self {
             title,
             width,
@@ -172,11 +187,13 @@ impl ContextBuilder {
             .await
             .ok_or(BuildError::AdapterNotFound)?;
 
+        let required = wgpu::Features::empty();
+
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
                     limits: adapter.limits(),
-                    features: wgpu::Features::empty(),
+                    features: required | features.unwrap_or_else(wgpu::Features::empty),
                     ..Default::default()
                 },
                 None,

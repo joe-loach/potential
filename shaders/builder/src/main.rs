@@ -1,20 +1,9 @@
-use serde_derive::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
-
+use common::*;
 use spirv_builder::*;
 
+use std::{fs::File, io::Write, path::PathBuf};
+
 const SHADERS: &[&'static str] = &["compute"];
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct Config {
-    shaders: HashMap<String, ShaderInfo>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ShaderInfo {
-    entries: Vec<String>,
-    module: PathBuf,
-}
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let built = SHADERS

@@ -9,34 +9,48 @@ extern crate spirv_std;
 
 #[cfg(not(target_arch = "spirv"))]
 use spirv_std::macros::spirv;
-use spirv_std::glam;
 
-pub fn collatz(mut n: u32) -> Option<u32> {
-    let mut i = 0;
-    if n == 0 {
-        return None;
-    }
-    while n != 1 {
-        n = if n % 2 == 0 {
-            n / 2
-        } else {
-            // Overflow? (i.e. 3*n + 1 > 0xffff_ffff)
-            if n >= 0x5555_5555 {
-                return None;
+#[cfg(target_arch = "spirv")]
+use crate::spirv_std::num_traits::Float;
+
+use particle::Particle;
+use spirv_std::glam::*;
+
+fn potential_sum(pos: Vec2, particles: &[Particle]) -> f32 {
+    let mut idx = 0;
+    let mut v = 0.0;
+    while idx < particles.len() {
+        let p = &particles[idx];
+        match p.potential(pos) {
+            Ok(x) => v += x,
+            Err(x) => {
+                return v + x;
             }
-            // TODO: Use this instead when/if checked add/mul can work: n.checked_mul(3)?.checked_add(1)?
-            3 * n + 1
-        };
-        i += 1;
+        }
+        idx += 1;
     }
-    Some(i)
+    v
 }
 
-#[spirv(compute(threads(64)))]
-pub fn main_cs(
-    #[spirv(global_invocation_id)] id: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] prime_indices: &mut [u32],
+#[spirv(fragment)]
+pub fn frag(
+    #[spirv(frag_coord)] coord: Vec4,
+    output: &mut Vec4
 ) {
-    let index = id.x as usize;
-    prime_indices[index] = collatz(prime_indices[index]).unwrap_or(u32::MAX);
+    let coord = coord.xy();
+    // let v = potential_sum(coord, &particles);
+    let particle = Particle::new(1.0, 1.0, vec2(0.0, 0.0));
+    let v = match particle.potential(coord) {
+        Ok(x) => x,
+        Err(x) => x,
+    };
+    let v = v.abs().clamp(0.0, 1.0);
+    *output = vec4(v, v, v, 1.0);
+}
+
+#[spirv(vertex)]
+pub fn vert(#[spirv(vertex_index)] idx: i32, #[spirv(position)] coord: &mut Vec4) {
+    let uv = vec2(((idx << 1) & 2) as f32, (idx & 2) as f32);
+    let pos = 2.0 * uv - Vec2::ONE;
+    *coord = pos.extend(0.0).extend(1.0);
 }
