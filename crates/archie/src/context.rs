@@ -190,7 +190,7 @@ impl ContextBuilder {
 
         let format = surface
             .get_preferred_format(&adapter)
-            .unwrap_or(TextureFormat::Bgra8UnormSrgb);
+            .unwrap_or(TextureFormat::Rgba8UnormSrgb);
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
