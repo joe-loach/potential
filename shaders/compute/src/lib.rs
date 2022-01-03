@@ -4,7 +4,6 @@
     register_attr(spirv),
     no_std
 )]
-#![deny(warnings)]
 
 extern crate spirv_std;
 
@@ -35,7 +34,7 @@ pub fn collatz(mut n: u32) -> Option<u32> {
 #[spirv(compute(threads(64)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: glam::UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] prime_indices: &mut [u32]
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] prime_indices: &mut [u32],
 ) {
     let index = id.x as usize;
     prime_indices[index] = collatz(prime_indices[index]).unwrap_or(u32::MAX);
