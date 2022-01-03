@@ -42,18 +42,24 @@ where
             event::Event::RedrawRequested(_) => {
                 ctx.egui_platform.update_time(start.elapsed().as_secs_f64());
 
-                let frame = ctx
-                    .surface
-                    .get_current_texture()
-                    .or_else(|e| {
-                        if let wgpu::SurfaceError::Outdated = e {
-                            ctx.surface.configure(&ctx.device, &ctx.surface_config);
-                            ctx.surface.get_current_texture()
-                        } else {
-                            Err(e)
-                        }
-                    })
-                    .unwrap();
+                // try our best to make sure we have a texture to draw to
+                let frame = ctx.surface.get_current_texture().or_else(|e| {
+                    if let wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost = e {
+                        ctx.surface.configure(&ctx.device, &ctx.surface_config);
+                        ctx.surface.get_current_texture()
+                    } else {
+                        Err(e)
+                    }
+                });
+                // if we fail, stop the program
+                let frame = match frame {
+                    Ok(frame) => frame,
+                    Err(err) => {
+                        log::error!("get_current_texture failed: {:?}", err);
+                        *control_flow = ControlFlow::Exit;
+                        return;
+                    }
+                };
 
                 let mut encoder = ctx
                     .device
