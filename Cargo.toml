@@ -1,16 +1,6 @@
-[package]
-name = "potential"
-version = "0.1.0"
-authors = ["Joe Loach <joe.gloach@gmail.com>"]
+[workspace]
+members = [
+    "crates/*",
+    "shaders/*",
+]
 resolver = "2"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-web = ["archie/web"]
-
-[dependencies]
-archie = { path = "crates/archie" }
-poml = { path = "crates/poml" }
-ultraviolet = "0.8.1"

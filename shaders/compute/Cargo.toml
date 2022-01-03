@@ -1,0 +1,12 @@
+[package]
+name = "compute"
+version = "0.0.1"
+authors = ["Joe Loach <joe.gloach@gmail.com>"]
+edition = "2021"
+
+[lib]
+crate-type = ["dylib", "lib"]
+
+[dependencies]
+glam = { version = "0.20.2", default-features = false, features = ["libm"] }
+spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu" }
