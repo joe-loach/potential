@@ -69,13 +69,13 @@ where
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
 
-                egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
-
                 let current = instant::Instant::now();
                 let elapsed = current - last;
                 state.update(&ctx, elapsed.as_secs_f32());
                 state.draw(&mut encoder, &view);
-
+                
+                egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
+                
                 // Submit the commands.
                 ctx.queue.submit(std::iter::once(encoder.finish()));
 
