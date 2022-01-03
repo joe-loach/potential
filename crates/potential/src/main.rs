@@ -308,5 +308,6 @@ async fn run() {
 }
 
 fn main() {
+    archie::log(log::Level::Debug);
     archie::block_on(run());
 }

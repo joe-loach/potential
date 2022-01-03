@@ -10,6 +10,7 @@ edition = "2021"
 web = ["archie/web"]
 
 [dependencies]
+log = "0.4.14"
 archie = { path = "../archie" }
 poml = { path = "../poml" }
 ultraviolet = "0.8.1"
