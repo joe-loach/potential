@@ -75,7 +75,7 @@ where
                 state.draw(&mut encoder, &view);
                 
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
-                
+
                 // Submit the commands.
                 ctx.queue.submit(std::iter::once(encoder.finish()));
 
@@ -163,7 +163,7 @@ fn egui_render<F>(
         target,
         &paint_jobs,
         &screen_descriptor,
-        Some(wgpu::Color::BLACK),
+        None,
     )
     .unwrap();
 }
