@@ -8,5 +8,4 @@ edition = "2021"
 crate-type = ["dylib", "lib"]
 
 [dependencies]
-glam = { version = "0.20.2", default-features = false, features = ["libm"] }
-spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu" }
+spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu", features = ["glam"] }

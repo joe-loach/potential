@@ -271,7 +271,6 @@ dependencies = [
 name = "compute"
 version = "0.0.1"
 dependencies = [
- "glam",
  "spirv-std",
 ]
 
@@ -1460,6 +1459,7 @@ version = "0.4.0-alpha.12"
 source = "git+https://github.com/EmbarkStudios/rust-gpu#480cd048e0599bcd2ba0ac5eb4c8b117bd6e5cd5"
 dependencies = [
  "bitflags",
+ "glam",
  "num-traits",
  "spirv-std-macros",
  "spirv-types",

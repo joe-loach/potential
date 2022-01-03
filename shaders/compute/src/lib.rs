@@ -9,6 +9,7 @@ extern crate spirv_std;
 
 #[cfg(not(target_arch = "spirv"))]
 use spirv_std::macros::spirv;
+use spirv_std::glam;
 
 pub fn collatz(mut n: u32) -> Option<u32> {
     let mut i = 0;
