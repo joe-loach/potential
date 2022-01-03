@@ -1,10 +1,16 @@
 set shell := ["powershell.exe", "-c"]
 
-default: serve
+default: run
 
 # serves potential
 serve: build
     miniserve --index index.html ./docs/
+
+run: build
+    cargo run --release -p potential
+
+debug: build
+    cargo run -p potential
 
 # build potential
 build:
