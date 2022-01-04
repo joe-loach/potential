@@ -31,6 +31,7 @@ struct App {
 
 impl App {
     pub fn new(ctx: &mut archie::Context) -> Result<Self> {
+        let ratio = (WIDTH as f32 / HEIGHT as f32).min(HEIGHT as f32 / WIDTH as f32);
         Ok(App {
             renderer: Renderer::new(ctx)?,
             width: WIDTH,
@@ -41,7 +42,7 @@ impl App {
             recompiled: false,
             mouse: glam::Vec2::ZERO,
             x_axis: Axis::new(-1.0, 1.0),
-            y_axis: Axis::new(-1.0, 1.0),
+            y_axis: Axis::new(-1.0, 1.0) * ratio,
             settings_open: false,
         })
     }

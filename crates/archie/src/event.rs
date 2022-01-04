@@ -1,5 +1,5 @@
 use winit::{
-    event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton},
     event_loop::{ControlFlow, EventLoop},
 };
 
@@ -19,6 +19,9 @@ pub trait EventHandler<E = ()> {
 
     fn key_up(&mut self, key: VirtualKeyCode) {}
     fn key_down(&mut self, key: VirtualKeyCode) {}
+
+    fn mouse_up(&mut self, key: MouseButton) {}
+    fn mouse_down(&mut self, key: MouseButton) {}
 
     fn mouse_moved(&mut self, x: f64, y: f64) {}
     fn wheel_moved(&mut self, dx: f32, dy: f32) {}
@@ -107,6 +110,12 @@ where
                 event::WindowEvent::MouseWheel { delta, .. } => {
                     if let event::MouseScrollDelta::LineDelta(dx, dy) = delta {
                         state.wheel_moved(dx, dy)
+                    }
+                }
+                event::WindowEvent::MouseInput { state: mouse_state, button, .. } => {
+                    match mouse_state {
+                        ElementState::Pressed => state.mouse_down(button),
+                        ElementState::Released => state.mouse_up(button),
                     }
                 }
                 event::WindowEvent::KeyboardInput {
