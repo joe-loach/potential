@@ -4,6 +4,7 @@ use anyhow::Result;
 use archie::{
     egui,
     wgpu::{self, util::DeviceExt},
+    winit::event::MouseButton,
 };
 use glam::{vec2, Vec2};
 use particle::Particle;
@@ -16,16 +17,22 @@ const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 struct App {
+    time: f32,
     renderer: Renderer,
     width: u32,
     height: u32,
     particles: Vec<Particle>,
     page: Page,
     editor_text: String,
-    recompiled: bool,
-    mouse: glam::Vec2,
+    mouse: Vec2,
+    mouse_raw: Vec2,
+    mouse_down: bool,
+    mouse_down_pos: Vec2,
+    dragging: bool,
     x_axis: Axis,
     y_axis: Axis,
+    x_axis_before: Axis,
+    y_axis_before: Axis,
     settings_open: bool,
 }
 
@@ -33,16 +40,22 @@ impl App {
     pub fn new(ctx: &mut archie::Context) -> Result<Self> {
         let ratio = (WIDTH as f32 / HEIGHT as f32).min(HEIGHT as f32 / WIDTH as f32);
         Ok(App {
+            time: 0.0,
             renderer: Renderer::new(ctx)?,
             width: WIDTH,
             height: HEIGHT,
             particles: Vec::new(),
             page: Page::Visualiser,
             editor_text: String::new(),
-            recompiled: false,
-            mouse: glam::Vec2::ZERO,
+            mouse: Vec2::ZERO,
+            mouse_raw: Vec2::ZERO,
+            mouse_down: false,
+            mouse_down_pos: Vec2::ZERO,
+            dragging: false,
             x_axis: Axis::new(-1.0, 1.0),
             y_axis: Axis::new(-1.0, 1.0) * ratio,
+            x_axis_before: Axis::new(-1.0, 1.0),
+            y_axis_before: Axis::new(-1.0, 1.0) * ratio,
             settings_open: false,
         })
     }
@@ -76,13 +89,12 @@ impl App {
                                 self.particles.push(Particle::new(
                                     value.value(),
                                     radius,
-                                    glam::Vec2::new(x.value(), y.value()),
+                                    Vec2::new(x.value(), y.value()),
                                 ));
                             }
                         }
                     }
                 }
-                self.recompiled = true;
             }
             Err(errors) => {
                 // there was an error, print it out for now
@@ -102,13 +114,24 @@ enum Page {
 }
 
 impl archie::event::EventHandler for App {
-    fn update(&mut self, ctx: &archie::Context, _dt: f32) {
+    fn update(&mut self, ctx: &archie::Context, dt: f32) {
+        self.time += dt;
+
         self.width = ctx.width();
         self.height = ctx.height();
 
-        if self.recompiled {
-            println!("Recompiled");
-            self.recompiled = false;
+        if self.dragging && self.page == Page::Visualiser {
+            let orig_mouse = map_pos(
+                self.mouse_raw,
+                vec2(self.width as f32, self.height as f32),
+                self.x_axis_before,
+                self.y_axis_before,
+            );
+            let dif = orig_mouse - self.mouse_down_pos;
+            self.x_axis = self.x_axis_before - dif.x;
+            self.y_axis = self.y_axis_before - dif.y;
+
+            // println!("{:?}", dif);
         }
     }
 
@@ -300,14 +323,41 @@ impl archie::event::EventHandler for App {
         }
     }
 
+    fn mouse_up(&mut self, key: MouseButton) {
+        if key == MouseButton::Left {
+            self.mouse_down = false;
+            self.dragging = false;
+        }
+    }
+
+    fn mouse_down(&mut self, key: MouseButton) {
+        if key == MouseButton::Left {
+            self.mouse_down = true;
+            self.mouse_down_pos = self.mouse;
+        }
+    }
+
     fn mouse_moved(&mut self, x: f64, y: f64) {
-        let pos = glam::Vec2::new(x as f32, y as f32);
+        let pos = Vec2::new(x as f32, y as f32);
+        self.mouse_raw = pos;
         self.mouse = map_pos(
             pos,
             vec2(self.width as f32, self.height as f32),
             self.x_axis,
             self.y_axis,
         );
+        let delta = ((self.mouse - self.mouse_down_pos)
+            * vec2(self.width as f32, self.height as f32))
+        .length();
+
+        if self.mouse_down && delta > 6.0 {
+            if !self.dragging {
+                // start drag
+                self.x_axis_before = self.x_axis;
+                self.y_axis_before = self.y_axis;
+            }
+            self.dragging = true;
+        }
     }
 
     fn wheel_moved(&mut self, _dx: f32, dy: f32) {
