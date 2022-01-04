@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu", features = ["glam"] }
+bytemuck = "1.7.3"

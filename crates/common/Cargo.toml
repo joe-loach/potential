@@ -6,6 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+glam = { version = "0.20", default-features = false, features = ["libm"] }
+bytemuck = "1.7.3"
+
+[target.'cfg(not(target_arch = "spirv"))'.dependencies]
+toml = "0.5.8"
 serde = "1.0.133"
 serde_derive = "1.0.133"
-toml = "0.5.8"

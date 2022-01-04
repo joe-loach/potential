@@ -8,7 +8,12 @@ use crate::Context;
 #[allow(unused_variables)]
 pub trait EventHandler<E = ()> {
     fn update(&mut self, ctx: &Context, dt: f32);
-    fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView);
+    fn draw(
+        &mut self,
+        ctx: &Context,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+    );
 
     fn ui(&mut self, ctx: &egui::CtxRef) {}
 
@@ -72,8 +77,8 @@ where
                 let current = instant::Instant::now();
                 let elapsed = current - last;
                 state.update(&ctx, elapsed.as_secs_f32());
-                state.draw(&mut encoder, &view);
-                
+                state.draw(&ctx, &mut encoder, &view);
+
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
 
                 // Submit the commands.
@@ -158,12 +163,6 @@ fn egui_render<F>(
     pass.update_user_textures(&ctx.device, &ctx.queue);
     pass.update_buffers(&ctx.device, &ctx.queue, &paint_jobs, &screen_descriptor);
 
-    pass.execute(
-        encoder,
-        target,
-        &paint_jobs,
-        &screen_descriptor,
-        None,
-    )
-    .unwrap();
+    pass.execute(encoder, target, &paint_jobs, &screen_descriptor, None)
+        .unwrap();
 }

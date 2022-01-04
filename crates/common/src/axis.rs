@@ -1,4 +1,5 @@
-#[derive(Clone)]
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Axis {
     pub min: f32,
     pub max: f32,
@@ -9,17 +10,9 @@ impl Axis {
         assert!(min < max);
         Self { min, max }
     }
-
-    pub fn min(&self) -> f32 {
-        self.min
-    }
-
-    pub fn max(&self) -> f32 {
-        self.max
-    }
 }
 
-use std::ops::*;
+use core::ops::*;
 
 impl Mul<f32> for Axis {
     type Output = Axis;

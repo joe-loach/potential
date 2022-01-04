@@ -21,4 +21,5 @@ log = "0.4.14"
 # error handling
 anyhow = "1.0.51"
 thiserror = "1.0.30"
-
+# byte conversion
+bytemuck = "1.7.3"

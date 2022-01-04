@@ -1,12 +1,15 @@
-mod axis;
 mod renderer;
 
 use anyhow::Result;
-use archie::{egui, wgpu};
+use archie::{
+    egui,
+    wgpu::{self, util::DeviceExt},
+};
+use glam::{vec2, Vec2};
 use particle::Particle;
 use poml::parser::ast;
 
-use axis::*;
+use common::*;
 use renderer::Renderer;
 
 const WIDTH: u32 = 800;
@@ -91,22 +94,6 @@ impl App {
     }
 }
 
-impl App {
-    fn map_pos(&self, pos: glam::Vec2) -> glam::Vec2 {
-        // [0, a]
-        // [0, 1]       (/a)
-        // [0, c-b]     (*(c-b))
-        // [b, c]       + b
-        fn map(x: f32, a: f32, b: f32, c: f32) -> f32 {
-            (x / a) * (c - b) + b
-        }
-        let (x, y) = (pos.x, pos.y);
-        let x = map(x, self.width as f32, self.x_axis.min(), self.x_axis.max());
-        let y = map(y, self.height as f32, self.y_axis.max(), self.y_axis.min());
-        glam::Vec2::new(x, y)
-    }
-}
-
 #[derive(PartialEq, Eq)]
 enum Page {
     Visualiser,
@@ -124,9 +111,67 @@ impl archie::event::EventHandler for App {
         }
     }
 
-    fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
+    fn draw(
+        &mut self,
+        ctx: &archie::Context,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+    ) {
         if self.page == Page::Visualiser {
-            self.renderer.render(encoder, target)
+            let device = ctx.device();
+
+            let empty = self.particles.is_empty();
+            let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
+            let contents = if empty {
+                bytemuck::cast_slice(&val)
+            } else {
+                bytemuck::cast_slice(&self.particles)
+            };
+
+            let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents,
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.renderer.bind_group_layout(),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: storage_buffer.as_entire_binding(),
+                }],
+            });
+
+            {
+                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[wgpu::RenderPassColorAttachment {
+                        view: &target,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: true,
+                        },
+                    }],
+                    depth_stencil_attachment: None,
+                });
+
+                pass.set_pipeline(&self.renderer.pipeline());
+                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_push_constants(
+                    wgpu::ShaderStages::all(),
+                    0,
+                    common::ShaderConstants {
+                        empty: empty as u32,
+                        width: self.width,
+                        height: self.height,
+                        x_axis: self.x_axis,
+                        y_axis: self.y_axis,
+                    }
+                    .as_bytes(),
+                );
+                pass.draw(0..3, 0..1);
+            }
         }
     }
 
@@ -242,15 +287,10 @@ impl archie::event::EventHandler for App {
                 egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    let particle = Particle::new(0.1, 0.1, glam::vec2(0.0, 0.0));
-                    let coord = self.mouse;
-                    let d = particle.dist(coord);
-                    let v = match particle.potential(coord) {
-                        Ok(x) => x,
-                        Err(x) => x,
-                    };
-                    let v = v.abs().clamp(0.0, 1.0);
-                    let e = particle.force(coord).unwrap_or(0.0);
+                    let pos = self.mouse;
+                    let d = particle::dist(pos, &self.particles);
+                    let v = particle::potential(pos, &self.particles);
+                    let e = particle::force(pos, &self.particles);
                     ui.monospace(format!("distance (m): {}", d));
                     ui.monospace(format!("potential (J/C): {}", v));
                     ui.monospace(format!("force (N/C): {}", e));
@@ -261,7 +301,12 @@ impl archie::event::EventHandler for App {
 
     fn mouse_moved(&mut self, x: f64, y: f64) {
         let pos = glam::Vec2::new(x as f32, y as f32);
-        self.mouse = self.map_pos(pos);
+        self.mouse = map_pos(
+            pos,
+            vec2(self.width as f32, self.height as f32),
+            self.x_axis,
+            self.y_axis,
+        );
     }
 
     fn wheel_moved(&mut self, _dx: f32, dy: f32) {

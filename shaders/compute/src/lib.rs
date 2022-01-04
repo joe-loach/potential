@@ -13,38 +13,30 @@ use spirv_std::macros::spirv;
 #[cfg(target_arch = "spirv")]
 use crate::spirv_std::num_traits::Float;
 
-use particle::Particle;
 use spirv_std::glam::*;
 
-// fn potential_sum(pos: Vec2, particles: &[Particle]) -> f32 {
-//     let mut idx = 0;
-//     let mut v = 0.0;
-//     while idx < particles.len() {
-//         let p = &particles[idx];
-//         match p.potential(pos) {
-//             Ok(x) => v += x,
-//             Err(x) => {
-//                 return v + x;
-//             }
-//         }
-//         idx += 1;
-//     }
-//     v
-// }
+use common::*;
+use particle::*;
 
 #[spirv(fragment)]
-pub fn frag(#[spirv(frag_coord)] coord: Vec4, output: &mut Vec4) {
-    let coord = coord.xy();
-    let resolution = vec2(1200.0, 900.0);
-    let mut coord = (coord / resolution) * 2.0 - Vec2::ONE;
-    coord.y = -coord.y;
-    // let v = potential_sum(coord, &particles);
-    let particle = Particle::new(0.1, 0.1, vec2(0.0, 0.0));
-    let v = match particle.potential(coord) {
-        Ok(x) => x,
-        Err(x) => x,
+pub fn frag(
+    #[spirv(frag_coord)] pos: Vec4,
+    #[spirv(push_constant)] constants: &ShaderConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] buffer: &[Particle],
+    output: &mut Vec4,
+) {
+    let pos = pos.xy();
+    let res = vec2(constants.width as f32, constants.height as f32);
+    let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
+    let v = match constants.empty != 0 {
+        false => {
+            let v = potential(pos, buffer);
+            v.abs().clamp(0.0, 1.0)
+        }
+        true => {
+            0.0
+        }
     };
-    let v = v.abs().clamp(0.0, 1.0);
     *output = vec4(v, v, v, 1.0);
 }
 

@@ -50,7 +50,7 @@ fn build(crate_name: impl Into<PathBuf>) -> Result<CompileResult, Box<dyn std::e
     let mut path: PathBuf = "shaders".into();
     let crate_name: PathBuf = crate_name.into();
     path.push(crate_name);
-    Ok(SpirvBuilder::new(path, "spirv-unknown-spv1.5")
+    Ok(SpirvBuilder::new(path, "spirv-unknown-vulkan1.1")
         .print_metadata(MetadataPrintout::None)
         .build()?)
 }

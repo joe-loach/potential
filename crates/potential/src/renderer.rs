@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, num::NonZeroU64};
 
 use anyhow::Result;
 use archie::wgpu;
@@ -10,6 +10,7 @@ struct Shader {
 
 pub struct Renderer {
     pipeline: wgpu::RenderPipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl Renderer {
@@ -18,10 +19,27 @@ impl Renderer {
 
         let device = ctx.device();
 
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(NonZeroU64::new(1).unwrap()),
+                },
+                count: None,
+            }],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[wgpu::PushConstantRange {
+                stages: wgpu::ShaderStages::all(),
+                range: 0..core::mem::size_of::<common::ShaderConstants>() as u32,
+            }],
         });
 
         let pipeline = pipeline(
@@ -31,26 +49,18 @@ impl Renderer {
             shaders.next().unwrap(),
         );
 
-        Ok(Self { pipeline })
+        Ok(Self {
+            pipeline,
+            bind_group_layout,
+        })
     }
 
-    pub fn render(&self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[wgpu::RenderPassColorAttachment {
-                view: &target,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: true,
-                }
-            }],
-            depth_stencil_attachment: None,
-        });
+    pub fn pipeline(&self) -> &wgpu::RenderPipeline {
+        &self.pipeline
+    }
 
-        pass.set_pipeline(&self.pipeline);
-        // pass.set_push_constants(stages, offset, data)
-        pass.draw(0..3, 0..1);
+    pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.bind_group_layout
     }
 }
 
@@ -74,9 +84,9 @@ fn pipeline(
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
             cull_mode: None,
-            clamp_depth: false,
             polygon_mode: wgpu::PolygonMode::Fill,
             conservative: false,
+            unclipped_depth: false,
         },
         depth_stencil: None,
         multisample: wgpu::MultisampleState {
@@ -93,6 +103,7 @@ fn pipeline(
                 write_mask: wgpu::ColorWrites::all(),
             }],
         }),
+        multiview: None,
     })
 }
 
