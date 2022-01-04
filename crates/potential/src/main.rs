@@ -242,11 +242,18 @@ impl archie::event::EventHandler for App {
                 egui::Window::new("Info").resizable(false).show(ctx, |ui| {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    // let v = self.potential(self.mouse);
-                    // let e = self.force(self.mouse);
-                    // ui.monospace(format!("distance (m): {}", self.dist(self.mouse)));
-                    // ui.monospace(format!("potential (J/C): {{{}, {}}}", v.x, v.y));
-                    // ui.monospace(format!("force (N/C): {{{}, {}}}", e.x, e.y));
+                    let particle = Particle::new(0.1, 0.1, glam::vec2(0.0, 0.0));
+                    let coord = self.mouse;
+                    let d = particle.dist(coord);
+                    let v = match particle.potential(coord) {
+                        Ok(x) => x,
+                        Err(x) => x,
+                    };
+                    let v = v.abs().clamp(0.0, 1.0);
+                    let e = particle.force(coord).unwrap_or(0.0);
+                    ui.monospace(format!("distance (m): {}", d));
+                    ui.monospace(format!("potential (J/C): {}", v));
+                    ui.monospace(format!("force (N/C): {}", e));
                 });
             }
         }
