@@ -139,8 +139,6 @@ impl archie::event::EventHandler for App {
             let dif = orig_mouse - self.mouse_down_pos;
             self.x_axis = self.x_axis_before - dif.x;
             self.y_axis = self.y_axis_before - dif.y;
-
-            // println!("{:?}", dif);
         }
     }
 
