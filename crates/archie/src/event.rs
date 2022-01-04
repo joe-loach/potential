@@ -1,5 +1,5 @@
 use winit::{
-    event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton},
+    event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, ModifiersState},
     event_loop::{ControlFlow, EventLoop},
 };
 
@@ -17,8 +17,8 @@ pub trait EventHandler<E = ()> {
 
     fn ui(&mut self, ctx: &egui::CtxRef) {}
 
-    fn key_up(&mut self, key: VirtualKeyCode) {}
-    fn key_down(&mut self, key: VirtualKeyCode) {}
+    fn key_up(&mut self, key: VirtualKeyCode, modifiers: &ModifiersState) {}
+    fn key_down(&mut self, key: VirtualKeyCode, modifiers: &ModifiersState) {}
 
     fn mouse_up(&mut self, key: MouseButton) {}
     fn mouse_down(&mut self, key: MouseButton) {}
@@ -35,6 +35,7 @@ where
 {
     ctx.window.set_visible(true);
     let mut last = instant::Instant::now();
+    let mut modifiers = ModifiersState::empty();
     let start = instant::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
@@ -118,6 +119,9 @@ where
                         ElementState::Released => state.mouse_up(button),
                     }
                 }
+                event::WindowEvent::ModifiersChanged(input) => {
+                    modifiers = input;
+                }
                 event::WindowEvent::KeyboardInput {
                     input:
                         KeyboardInput {
@@ -127,8 +131,8 @@ where
                         },
                     ..
                 } => match key_state {
-                    ElementState::Pressed => state.key_down(key),
-                    ElementState::Released => state.key_up(key),
+                    ElementState::Pressed => state.key_down(key, &modifiers),
+                    ElementState::Released => state.key_up(key, &modifiers),
                 },
                 _ => (),
             },

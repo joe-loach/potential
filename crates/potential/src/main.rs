@@ -4,7 +4,7 @@ use anyhow::Result;
 use archie::{
     egui,
     wgpu::{self, util::DeviceExt},
-    winit::event::MouseButton,
+    winit::event::{MouseButton, VirtualKeyCode, ModifiersState},
 };
 use glam::{vec2, Vec2};
 use particle::Particle;
@@ -104,6 +104,15 @@ impl App {
                 }
             }
         }
+    }
+
+    fn zoom(&mut self, zoom: f32) {
+        // scale axis
+        self.x_axis *= zoom;
+        self.y_axis *= zoom;
+        // translate to keep mouse at the same x and y
+        self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
+        self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
     }
 }
 
@@ -323,6 +332,20 @@ impl archie::event::EventHandler for App {
         }
     }
 
+    fn key_down(&mut self, key: VirtualKeyCode, modifiers: &ModifiersState) {
+        match (*modifiers, key) {
+            (ModifiersState::CTRL, VirtualKeyCode::Equals) => {
+                // zoom in
+                self.zoom(0.9);
+            }
+            (ModifiersState::CTRL, VirtualKeyCode::Minus) => {
+                // zoom out
+                self.zoom(1.1);
+            }
+            _ => (),
+        }
+    }
+
     fn mouse_up(&mut self, key: MouseButton) {
         if key == MouseButton::Left {
             self.mouse_down = false;
@@ -369,12 +392,7 @@ impl archie::event::EventHandler for App {
         // keep delta normalised
         let dy = dy.clamp(-1.0, 1.0);
         let zoom = (dy * ZOOM_INTENSITY).exp();
-        // scale axis
-        self.x_axis *= zoom;
-        self.y_axis *= zoom;
-        // translate to keep mouse at the same x and y
-        self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
-        self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
+        self.zoom(zoom);
     }
 }
 
