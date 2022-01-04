@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std, feature(lang_items))]
 
-use spirv_std::glam;
 use glam::Vec2;
+use spirv_std::glam;
 
 // USEFUL CONSTANTS
 pub const COULOMB: f32 = 8.987_552e9;

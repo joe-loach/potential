@@ -1,5 +1,8 @@
 use winit::{
-    event::{self, ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent, MouseButton, ModifiersState},
+    event::{
+        self, ElementState, Event, KeyboardInput, ModifiersState, MouseButton, VirtualKeyCode,
+        WindowEvent,
+    },
     event_loop::{ControlFlow, EventLoop},
 };
 
@@ -113,12 +116,14 @@ where
                         state.wheel_moved(dx, dy)
                     }
                 }
-                event::WindowEvent::MouseInput { state: mouse_state, button, .. } => {
-                    match mouse_state {
-                        ElementState::Pressed => state.mouse_down(button),
-                        ElementState::Released => state.mouse_up(button),
-                    }
-                }
+                event::WindowEvent::MouseInput {
+                    state: mouse_state,
+                    button,
+                    ..
+                } => match mouse_state {
+                    ElementState::Pressed => state.mouse_down(button),
+                    ElementState::Released => state.mouse_up(button),
+                },
                 event::WindowEvent::ModifiersChanged(input) => {
                     modifiers = input;
                 }

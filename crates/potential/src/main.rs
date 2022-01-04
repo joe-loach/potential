@@ -4,7 +4,7 @@ use anyhow::Result;
 use archie::{
     egui,
     wgpu::{self, util::DeviceExt},
-    winit::event::{MouseButton, VirtualKeyCode, ModifiersState},
+    winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
 use glam::{vec2, Vec2};
 use particle::Particle;

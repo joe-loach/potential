@@ -33,9 +33,7 @@ pub fn frag(
             let v = potential(pos, buffer);
             v.abs().clamp(0.0, 1.0)
         }
-        true => {
-            0.0
-        }
+        true => 0.0,
     };
     *output = vec4(v, v, v, 1.0);
 }
