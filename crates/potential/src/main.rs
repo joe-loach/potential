@@ -277,8 +277,8 @@ impl archie::event::EventHandler for App {
         self.x_axis *= zoom;
         self.y_axis *= zoom;
         // translate to keep mouse at the same x and y
-        self.x_axis -= self.mouse.x / zoom - self.mouse.x;
-        self.y_axis -= self.mouse.y / zoom - self.mouse.y;
+        self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
+        self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
     }
 }
 
