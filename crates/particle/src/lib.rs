@@ -52,7 +52,7 @@ unsafe impl bytemuck::Pod for Particle {}
 
 pub fn dist(pos: Vec2, buffer: &[Particle]) -> f32 {
     let mut idx = 0;
-    let mut d: f32 = 0.0;
+    let mut d: f32 = f32::INFINITY;
     while idx < buffer.len() {
         let p = &buffer[idx];
         d = d.min(p.dist(pos));
