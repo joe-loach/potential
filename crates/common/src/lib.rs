@@ -23,11 +23,25 @@ pub fn map_pos(pos: Vec2, res: Vec2, x_axis: Axis, y_axis: Axis) -> Vec2 {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ShaderConstants {
+    __pad__: u32,
     pub empty: u32,
     pub width: u32,
     pub height: u32,
     pub x_axis: Axis,
     pub y_axis: Axis,
+}
+
+impl ShaderConstants {
+    pub fn new(empty: u32, width: u32, height: u32, x_axis: Axis, y_axis: Axis) -> Self {
+        Self {
+            empty,
+            width,
+            height,
+            x_axis,
+            y_axis,
+            __pad__: 0,
+        }
+    }
 }
 
 #[cfg(not(target_arch = "spirv"))]

@@ -21,8 +21,8 @@ use particle::*;
 #[spirv(fragment)]
 pub fn frag(
     #[spirv(frag_coord)] pos: Vec4,
-    #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] buffer: &[Particle],
+    #[spirv(uniform, descriptor_set = 0, binding = 1)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
     let pos = pos.xy();

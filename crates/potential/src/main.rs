@@ -160,25 +160,49 @@ impl archie::event::EventHandler for App {
             let device = ctx.device();
 
             let empty = self.particles.is_empty();
-            let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
-            let contents = if empty {
-                bytemuck::cast_slice(&val)
-            } else {
-                bytemuck::cast_slice(&self.particles)
+            let particles = {
+                let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
+                let contents = if empty {
+                    bytemuck::cast_slice(&val)
+                } else {
+                    bytemuck::cast_slice(&self.particles)
+                };
+
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents,
+                    usage: wgpu::BufferUsages::STORAGE,
+                })
+            };
+            let constants = {
+                let constants = ShaderConstants::new(
+                    empty as u32,
+                    self.width,
+                    self.height,
+                    self.x_axis,
+                    self.y_axis,
+                );
+                let contents = bytemuck::bytes_of(&constants);
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents,
+                    usage: wgpu::BufferUsages::UNIFORM,
+                })
             };
 
-            let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents,
-                usage: wgpu::BufferUsages::STORAGE,
-            });
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: self.renderer.bind_group_layout(),
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: storage_buffer.as_entire_binding(),
-                }],
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: particles.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: constants.as_entire_binding(),
+                    },
+                ],
             });
 
             {
@@ -197,18 +221,6 @@ impl archie::event::EventHandler for App {
 
                 pass.set_pipeline(self.renderer.pipeline());
                 pass.set_bind_group(0, &bind_group, &[]);
-                pass.set_push_constants(
-                    wgpu::ShaderStages::all(),
-                    0,
-                    common::ShaderConstants {
-                        empty: empty as u32,
-                        width: self.width,
-                        height: self.height,
-                        x_axis: self.x_axis,
-                        y_axis: self.y_axis,
-                    }
-                    .as_bytes(),
-                );
                 pass.draw(0..3, 0..1);
             }
         }
@@ -421,7 +433,7 @@ async fn run() {
         .height(HEIGHT)
         .fullscreen(cfg!(target_arch = "wasm32")); // fullscreen for wasm
 
-    let features = wgpu::Features::SPIRV_SHADER_PASSTHROUGH | wgpu::Features::PUSH_CONSTANTS;
+    let features = wgpu::Features::SPIRV_SHADER_PASSTHROUGH;
     match builder.build(Some(features)).await {
         Ok((event_loop, mut ctx)) => match App::new(&mut ctx) {
             Ok(app) => archie::event::run(ctx, event_loop, app),

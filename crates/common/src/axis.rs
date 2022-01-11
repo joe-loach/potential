@@ -1,4 +1,4 @@
-#[repr(C)]
+#[repr(C, align(16))]
 #[derive(Clone, Copy)]
 pub struct Axis {
     pub min: f32,
