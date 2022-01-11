@@ -1,12 +1,7 @@
-use std::{borrow::Cow, num::NonZeroU64};
+use std::num::NonZeroU64;
 
 use anyhow::Result;
 use archie::wgpu;
-
-struct Shader {
-    entries: Vec<String>,
-    desc: wgpu::ShaderModuleDescriptorSpirV<'static>,
-}
 
 pub struct Renderer {
     pipeline: wgpu::RenderPipeline,
@@ -15,8 +10,6 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new(ctx: &mut archie::Context) -> Result<Self> {
-        let mut shaders = load_shaders()?;
-
         let device = ctx.device();
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -58,7 +51,6 @@ impl Renderer {
             device,
             &pipeline_layout,
             ctx.surface_format(),
-            shaders.next().unwrap(),
         );
 
         Ok(Self {
@@ -80,15 +72,15 @@ fn pipeline(
     device: &wgpu::Device,
     layout: &wgpu::PipelineLayout,
     format: wgpu::TextureFormat,
-    shader: Shader,
 ) -> wgpu::RenderPipeline {
-    let module = unsafe { device.create_shader_module_spirv(&shader.desc) };
+    let desc = wgpu::include_spirv_raw!("shaders/compute.spv");
+    let module = unsafe { device.create_shader_module_spirv(&desc) };
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(layout),
         vertex: wgpu::VertexState {
             module: &module,
-            entry_point: &shader.entries[1],
+            entry_point: "vert",
             buffers: &[],
         },
         primitive: wgpu::PrimitiveState {
@@ -108,7 +100,7 @@ fn pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &module,
-            entry_point: &shader.entries[0],
+            entry_point: "frag",
             targets: &[wgpu::ColorTargetState {
                 format,
                 blend: None,
@@ -119,20 +111,20 @@ fn pipeline(
     })
 }
 
-fn load_shaders() -> Result<impl Iterator<Item = Shader>> {
-    use common::*;
-    let config = std::fs::read_to_string("shaders.toml")?;
-    let config: Config = toml::from_str(&config)?;
-    Ok(config.shaders.into_iter().map(|(name, info)| {
-        let data = std::fs::read(&info.module).unwrap();
-        let name: &'static str = Box::leak(name.into_boxed_str());
-        let spirv = Cow::Owned(wgpu::util::make_spirv_raw(&data).into_owned());
-        Shader {
-            entries: info.entries,
-            desc: wgpu::ShaderModuleDescriptorSpirV {
-                label: Some(name),
-                source: spirv,
-            },
-        }
-    }))
-}
+// fn load_shaders() -> Result<impl Iterator<Item = Shader>> {
+//     use common::*;
+//     let config = std::fs::read_to_string("shaders.toml")?;
+//     let config: Config = toml::from_str(&config)?;
+//     Ok(config.shaders.into_iter().map(|(name, info)| {
+//         let data = std::fs::read(&info.module).unwrap();
+//         let name: &'static str = Box::leak(name.into_boxed_str());
+//         let spirv = Cow::Owned(wgpu::util::make_spirv_raw(&data).into_owned());
+//         Shader {
+//             entries: info.entries,
+//             desc: wgpu::ShaderModuleDescriptorSpirV {
+//                 label: Some(name),
+//                 source: spirv,
+//             },
+//         }
+//     }))
+// }

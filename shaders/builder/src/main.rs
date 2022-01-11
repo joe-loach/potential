@@ -1,8 +1,9 @@
 use common::*;
 use spirv_builder::*;
 
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{fs::{File, self}, io::Write, path::PathBuf};
 
+const SHADER_FOLDER_PATH: &str = "crates/potential/src/shaders";
 const SHADERS: &[&str] = &["compute"];
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,6 +43,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .open("shaders.toml")?;
 
     write!(shader_toml, "{}", toml)?;
+
+    // symlink all the shaders to a local folder to the potential bin
+    for entry in fs::read_dir(SHADER_FOLDER_PATH)? {
+        fs::remove_file(entry?.path())?;
+    }
+    for (name, ShaderInfo { module, .. }) in config.shaders {
+        fs::hard_link(module, format!("{}/{}.spv", SHADER_FOLDER_PATH, name))?;
+    }
 
     Ok(())
 }
