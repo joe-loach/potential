@@ -28,12 +28,13 @@ pub fn frag(
     let pos = pos.xy();
     let res = vec2(constants.width as f32, constants.height as f32);
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
-    let v = match constants.empty != 0 {
-        false => {
-            let v = potential(pos, buffer);
-            v.abs().clamp(0.0, 1.0)
-        }
-        true => 0.0,
+    let v = if constants.empty != 0 {
+        // empty, don't calculate anything
+        0.0
+    } else {
+        // calculate the potential with the given buffer
+        let v = potential(pos, buffer);
+        v.abs().clamp(0.0, 1.0)
     };
     *output = vec4(v, v, v, 1.0);
 }
