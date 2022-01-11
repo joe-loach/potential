@@ -38,8 +38,7 @@ struct App {
 
 impl App {
     pub fn new(ctx: &mut archie::Context) -> Result<Self> {
-        let ratio = (WIDTH as f32 / HEIGHT as f32).min(HEIGHT as f32 / WIDTH as f32);
-        Ok(App {
+        let mut app = App {
             time: 0.0,
             renderer: Renderer::new(ctx)?,
             width: WIDTH,
@@ -53,11 +52,13 @@ impl App {
             mouse_down_pos: Vec2::ZERO,
             dragging: false,
             x_axis: Axis::new(-1.0, 1.0),
-            y_axis: Axis::new(-1.0, 1.0) * ratio,
+            y_axis: Axis::new(-1.0, 1.0),
             x_axis_before: Axis::new(-1.0, 1.0),
-            y_axis_before: Axis::new(-1.0, 1.0) * ratio,
+            y_axis_before: Axis::new(-1.0, 1.0),
             settings_open: false,
-        })
+        };
+        app.correct_y_axis();
+        Ok(app)
     }
 
     pub fn compile(&mut self) {
@@ -113,6 +114,13 @@ impl App {
         // translate to keep mouse at the same x and y
         self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
         self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
+    }
+
+    fn correct_y_axis(&mut self) {
+        let w = self.width as f32;
+        let h = self.height as f32;
+        let ratio = (w / h).min(h / w);
+        self.y_axis = self.x_axis * ratio;
     }
 }
 
@@ -240,34 +248,44 @@ impl archie::event::EventHandler for App {
             })
         });
 
-        egui::Window::new("Settings")
-            .open(&mut self.settings_open)
-            .show(ctx, |ui| {
-                ui.label("X axis");
-                ui.horizontal(|ui| {
-                    ui.add(
-                        egui::DragValue::new(&mut self.x_axis.min)
-                            .clamp_range(-f32::INFINITY..=self.x_axis.max),
-                    );
-                    ui.label("≤ X ≤");
-                    ui.add(
-                        egui::DragValue::new(&mut self.x_axis.max)
-                            .clamp_range(self.x_axis.min..=f32::INFINITY),
-                    );
+        {
+            let mut open = self.settings_open;
+            egui::Window::new("Settings")
+                .open(&mut open)
+                .show(ctx, |ui| {
+                    ui.label("X axis");
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::DragValue::new(&mut self.x_axis.min)
+                                .clamp_range(-f32::INFINITY..=self.x_axis.max),
+                        );
+                        ui.label("≤ X ≤");
+                        ui.add(
+                            egui::DragValue::new(&mut self.x_axis.max)
+                                .clamp_range(self.x_axis.min..=f32::INFINITY),
+                        );
+                    });
+                    ui.label("Y axis");
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::DragValue::new(&mut self.y_axis.min)
+                                .clamp_range(-f32::INFINITY..=self.y_axis.max),
+                        );
+                        ui.label("≤ Y ≤");
+                        ui.add(
+                            egui::DragValue::new(&mut self.y_axis.max)
+                                .clamp_range(self.y_axis.min..=f32::INFINITY),
+                        );
+                    });
+
+                    ui.separator();
+
+                    if ui.button("Correct Ratio").clicked() {
+                        self.correct_y_axis();
+                    }
                 });
-                ui.label("Y axis");
-                ui.horizontal(|ui| {
-                    ui.add(
-                        egui::DragValue::new(&mut self.y_axis.min)
-                            .clamp_range(-f32::INFINITY..=self.y_axis.max),
-                    );
-                    ui.label("≤ Y ≤");
-                    ui.add(
-                        egui::DragValue::new(&mut self.y_axis.max)
-                            .clamp_range(self.y_axis.min..=f32::INFINITY),
-                    );
-                });
-            });
+            self.settings_open = open;
+        }
 
         match self.page {
             Page::Editor => {
