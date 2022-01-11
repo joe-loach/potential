@@ -113,7 +113,7 @@ fn load_shaders() -> Result<impl Iterator<Item = Shader>> {
     let config: Config = toml::from_str(&config)?;
     Ok(config.shaders.into_iter().map(|(name, info)| {
         let data = std::fs::read(&info.module).unwrap();
-        let name: &'static str = Box::leak(name.clone().into_boxed_str());
+        let name: &'static str = Box::leak(name.into_boxed_str());
         let spirv = Cow::Owned(wgpu::util::make_spirv_raw(&data).into_owned());
         Shader {
             entries: info.entries,
