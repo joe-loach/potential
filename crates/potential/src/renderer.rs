@@ -1,5 +1,3 @@
-use std::num::NonZeroU64;
-
 use anyhow::Result;
 use archie::wgpu;
 
@@ -19,9 +17,9 @@ impl Renderer {
                     binding: 0,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
                         has_dynamic_offset: false,
-                        min_binding_size: Some(NonZeroU64::new(1).unwrap()),
+                        min_binding_size: None,
                     },
                     count: None,
                 },
@@ -31,10 +29,7 @@ impl Renderer {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: Some(
-                            NonZeroU64::new(core::mem::size_of::<common::ShaderConstants>() as u64)
-                                .unwrap(),
-                        ),
+                        min_binding_size: None,
                     },
                     count: None,
                 },
@@ -47,11 +42,7 @@ impl Renderer {
             push_constant_ranges: &[],
         });
 
-        let pipeline = pipeline(
-            device,
-            &pipeline_layout,
-            ctx.surface_format(),
-        );
+        let pipeline = pipeline(device, &pipeline_layout, ctx.surface_format());
 
         Ok(Self {
             pipeline,
@@ -73,8 +64,15 @@ fn pipeline(
     layout: &wgpu::PipelineLayout,
     format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
-    let desc = wgpu::include_spirv_raw!("shaders/compute.spv");
-    let module = unsafe { device.create_shader_module_spirv(&desc) };
+    let desc = {
+        let spirv = include_bytes!("shaders/compute.spv");
+        let source = wgpu::util::make_spirv(spirv);
+        wgpu::ShaderModuleDescriptor {
+            label: None,
+            source,
+        }
+    };
+    let module = { device.create_shader_module(&desc) };
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(layout),

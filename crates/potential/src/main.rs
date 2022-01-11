@@ -433,8 +433,7 @@ async fn run() {
         .height(HEIGHT)
         .fullscreen(cfg!(target_arch = "wasm32")); // fullscreen for wasm
 
-    let features = wgpu::Features::SPIRV_SHADER_PASSTHROUGH;
-    match builder.build(Some(features)).await {
+    match builder.build(None).await {
         Ok((event_loop, mut ctx)) => match App::new(&mut ctx) {
             Ok(app) => archie::event::run(ctx, event_loop, app),
             Err(e) => {

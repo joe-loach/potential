@@ -14,7 +14,7 @@ cfg-if = "1"
 # windowing
 winit = "0.26"
 # rendering
-wgpu = "0.12"
+wgpu = { version = "0.12", features = [ "spirv"] }
 # gui
 egui = "0.16"
 egui_winit_platform = { version = "0.13.0", features = [ "clipboard" ] }
