@@ -111,10 +111,11 @@ where
                 event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_moved(position.x, position.y);
                 }
-                event::WindowEvent::MouseWheel { delta, .. } => {
-                    if let event::MouseScrollDelta::LineDelta(dx, dy) = delta {
-                        state.wheel_moved(dx, dy)
-                    }
+                event::WindowEvent::MouseWheel {
+                    delta: event::MouseScrollDelta::LineDelta(dx, dy),
+                    ..
+                } => {
+                    state.wheel_moved(dx, dy);
                 }
                 event::WindowEvent::MouseInput {
                     state: mouse_state,

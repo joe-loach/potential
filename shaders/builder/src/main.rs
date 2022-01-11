@@ -3,7 +3,7 @@ use spirv_builder::*;
 
 use std::{fs::File, io::Write, path::PathBuf};
 
-const SHADERS: &[&'static str] = &["compute"];
+const SHADERS: &[&str] = &["compute"];
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let built = SHADERS

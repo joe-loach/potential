@@ -166,7 +166,7 @@ impl archie::event::EventHandler for App {
             });
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
-                layout: &self.renderer.bind_group_layout(),
+                layout: self.renderer.bind_group_layout(),
                 entries: &[wgpu::BindGroupEntry {
                     binding: 0,
                     resource: storage_buffer.as_entire_binding(),
@@ -177,7 +177,7 @@ impl archie::event::EventHandler for App {
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &target,
+                        view: target,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Load,
@@ -187,7 +187,7 @@ impl archie::event::EventHandler for App {
                     depth_stencil_attachment: None,
                 });
 
-                pass.set_pipeline(&self.renderer.pipeline());
+                pass.set_pipeline(self.renderer.pipeline());
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.set_push_constants(
                     wgpu::ShaderStages::all(),
