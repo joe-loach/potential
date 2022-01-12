@@ -147,10 +147,13 @@ where
                 event::WindowEvent::CursorMoved { position, .. } => {
                     state.mouse_moved(position.x, position.y);
                 }
-                event::WindowEvent::MouseWheel {
-                    delta: event::MouseScrollDelta::LineDelta(dx, dy),
-                    ..
-                } => {
+                event::WindowEvent::MouseWheel { delta, .. } => {
+                    let (dx, dy) = match delta {
+                        event::MouseScrollDelta::LineDelta(dx, dy) => (dx, dy),
+                        event::MouseScrollDelta::PixelDelta(delta) => {
+                            (delta.x as f32 / 8.0, delta.y as f32 / 8.0)
+                        }
+                    };
                     state.wheel_moved(dx, dy);
                 }
                 event::WindowEvent::MouseInput {
@@ -176,8 +179,12 @@ where
                 } => {
                     #[cfg(target_arch = "wasm32")]
                     match key {
-                        VirtualKeyCode::LAlt | VirtualKeyCode::RAlt => modifiers.toggle(ModifiersState::ALT),
-                        VirtualKeyCode::LControl | VirtualKeyCode::RControl => modifiers.toggle(ModifiersState::CTRL),
+                        VirtualKeyCode::LAlt | VirtualKeyCode::RAlt => {
+                            modifiers.toggle(ModifiersState::ALT)
+                        }
+                        VirtualKeyCode::LControl | VirtualKeyCode::RControl => {
+                            modifiers.toggle(ModifiersState::CTRL)
+                        }
                         VirtualKeyCode::LWin => modifiers.toggle(ModifiersState::LOGO),
                         _ => (),
                     }
