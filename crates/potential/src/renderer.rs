@@ -57,7 +57,15 @@ impl Renderer {
         })
     }
 
-    pub fn update(&mut self, device: &wgpu::Device, particles: &[Particle], width: u32, height: u32, x_axis: Axis, y_axis: Axis) {
+    pub fn update(
+        &mut self,
+        device: &wgpu::Device,
+        particles: &[Particle],
+        width: u32,
+        height: u32,
+        x_axis: Axis,
+        y_axis: Axis,
+    ) {
         self.particles = {
             let mut buf = [Particle::default(); 32];
             buf[..particles.len().min(32)].copy_from_slice(particles);
@@ -69,13 +77,8 @@ impl Renderer {
             })
         };
         self.constants = {
-            let constants = ShaderConstants::new(
-                particles.len() as u32,
-                width,
-                height,
-                x_axis,
-                y_axis,
-            );
+            let constants =
+                ShaderConstants::new(particles.len() as u32, width, height, x_axis, y_axis);
             let contents = bytemuck::bytes_of(&constants);
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -84,7 +87,7 @@ impl Renderer {
             })
         };
     }
-    
+
     pub fn pipeline(&self) -> &wgpu::RenderPipeline {
         &self.pipeline
     }

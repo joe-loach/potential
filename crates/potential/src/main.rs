@@ -2,8 +2,7 @@ mod renderer;
 
 use anyhow::Result;
 use archie::{
-    egui,
-    wgpu::{self, util::DeviceExt},
+    egui, wgpu,
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
 use glam::{vec2, Vec2};
