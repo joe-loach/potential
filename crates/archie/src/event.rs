@@ -161,6 +161,7 @@ where
                     ElementState::Pressed => state.mouse_down(button),
                     ElementState::Released => state.mouse_up(button),
                 },
+                #[cfg(not(target_arch = "wasm32"))]
                 event::WindowEvent::ModifiersChanged(input) => {
                     modifiers = input;
                 }
@@ -172,10 +173,19 @@ where
                             ..
                         },
                     ..
-                } => match key_state {
-                    ElementState::Pressed => state.key_down(key, &modifiers),
-                    ElementState::Released => state.key_up(key, &modifiers),
-                },
+                } => {
+                    #[cfg(target_arch = "wasm32")]
+                    match key {
+                        VirtualKeyCode::LAlt | VirtualKeyCode::RAlt => modifiers.toggle(ModifiersState::ALT),
+                        VirtualKeyCode::LControl | VirtualKeyCode::RControl => modifiers.toggle(ModifiersState::CTRL),
+                        VirtualKeyCode::LWin => modifiers.toggle(ModifiersState::LOGO),
+                        _ => (),
+                    }
+                    match key_state {
+                        ElementState::Pressed => state.key_down(key, &modifiers),
+                        ElementState::Released => state.key_up(key, &modifiers),
+                    }
+                }
                 _ => (),
             },
             _ => (),
