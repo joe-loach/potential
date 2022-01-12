@@ -69,7 +69,7 @@ pub fn potential(pos: Vec2, buffer: &[Particle]) -> f32 {
         match p.potential(pos) {
             Ok(x) => v += x,
             Err(x) => {
-                return v + x;
+                return x;
             }
         }
         idx += 1;
