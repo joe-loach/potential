@@ -178,7 +178,7 @@ fn egui_render<F>(
         physical_height: ctx.surface_config.height,
         scale_factor: ctx.window.scale_factor() as f32,
     };
-    pass.update_texture(&ctx.device, &ctx.queue, &platform.context().font_image());
+    pass.update_texture(&ctx.device, &ctx.queue, &platform.context().texture());
     pass.update_user_textures(&ctx.device, &ctx.queue);
     pass.update_buffers(&ctx.device, &ctx.queue, &paint_jobs, &screen_descriptor);
 

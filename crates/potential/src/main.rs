@@ -7,7 +7,7 @@ use archie::{
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
 use glam::{vec2, Vec2};
-use particle::Particle;
+use particle::{Particle};
 use poml::parser::ast;
 
 use common::*;
@@ -159,24 +159,35 @@ impl archie::event::EventHandler for App {
         if self.page == Page::Visualiser {
             let device = ctx.device();
 
-            let empty = self.particles.is_empty();
-            let particles = {
-                let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
-                let contents = if empty {
-                    bytemuck::cast_slice(&val)
-                } else {
-                    bytemuck::cast_slice(&self.particles)
-                };
+            // let empty = self.particles.is_empty();
+            // let particles = {
+            //     let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
+            //     let contents = if empty {
+            //         bytemuck::cast_slice(&val)
+            //     } else {
+            //         bytemuck::cast_slice(&self.particles)
+            //     };
 
+            //     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            //         label: None,
+            //         contents,
+            //         usage: wgpu::BufferUsages::STORAGE,
+            //     })
+            // };
+            let particles = {
+                let mut particles = [Particle::default(); 32];
+                let slice = self.particles.as_slice();
+                particles[..slice.len()].copy_from_slice(slice);
+                let contents = bytemuck::cast_slice(&particles);
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: None,
                     contents,
-                    usage: wgpu::BufferUsages::STORAGE,
+                    usage: wgpu::BufferUsages::UNIFORM,
                 })
             };
             let constants = {
                 let constants = ShaderConstants::new(
-                    empty as u32,
+                    self.particles.len() as u32,
                     self.width,
                     self.height,
                     self.x_axis,
@@ -349,9 +360,16 @@ impl archie::event::EventHandler for App {
                     ui.small("Under cursor");
                     ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
                     let pos = self.mouse;
-                    let d = particle::dist(pos, &self.particles);
-                    let v = particle::potential(pos, &self.particles);
-                    let e = particle::force(pos, &self.particles);
+                    let arr = {
+                        let mut particles = [Particle::default(); 32];
+                        let slice = self.particles.as_slice();
+                        particles[..slice.len()].copy_from_slice(slice);
+                        particles
+                    };
+                    let len = self.particles.len();
+                    let d = particle::dist(pos, &arr, len);
+                    let v = particle::potential(pos, &arr, len);
+                    let e = particle::force(pos, &arr, len);
                     ui.monospace(format!("distance (m): {}", d));
                     ui.monospace(format!("potential (J/C): {}", v));
                     ui.monospace(format!("force (N/C): {}", e));

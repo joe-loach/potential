@@ -4,6 +4,7 @@ mod axis;
 
 pub use axis::Axis;
 
+use spirv_std::glam;
 use glam::Vec2;
 
 pub fn map_pos(pos: Vec2, res: Vec2, x_axis: Axis, y_axis: Axis) -> Vec2 {
@@ -24,7 +25,7 @@ pub fn map_pos(pos: Vec2, res: Vec2, x_axis: Axis, y_axis: Axis) -> Vec2 {
 #[derive(Clone, Copy)]
 pub struct ShaderConstants {
     __pad__: u32,
-    pub empty: u32,
+    pub len: u32,
     pub width: u32,
     pub height: u32,
     pub x_axis: Axis,
@@ -32,9 +33,9 @@ pub struct ShaderConstants {
 }
 
 impl ShaderConstants {
-    pub fn new(empty: u32, width: u32, height: u32, x_axis: Axis, y_axis: Axis) -> Self {
+    pub fn new(len: u32, width: u32, height: u32, x_axis: Axis, y_axis: Axis) -> Self {
         Self {
-            empty,
+            len,
             width,
             height,
             x_axis,

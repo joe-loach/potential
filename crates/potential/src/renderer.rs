@@ -17,7 +17,7 @@ impl Renderer {
                     binding: 0,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
@@ -88,7 +88,7 @@ fn pipeline(
             cull_mode: None,
             polygon_mode: wgpu::PolygonMode::Fill,
             conservative: false,
-            unclipped_depth: false,
+            clamp_depth: false,
         },
         depth_stencil: None,
         multisample: wgpu::MultisampleState {
@@ -105,7 +105,6 @@ fn pipeline(
                 write_mask: wgpu::ColorWrites::all(),
             }],
         }),
-        multiview: None,
     })
 }
 

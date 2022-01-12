@@ -6,9 +6,8 @@ use spirv_std::glam;
 // USEFUL CONSTANTS
 pub const COULOMB: f32 = 8.987_552e9;
 pub const GRAVITATIONAL: f32 = 6.674_302e-11;
-
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Particle {
     pub value: f32,
     pub radius: f32,
@@ -50,10 +49,12 @@ impl Particle {
 unsafe impl bytemuck::Zeroable for Particle {}
 unsafe impl bytemuck::Pod for Particle {}
 
-pub fn dist(pos: Vec2, buffer: &[Particle]) -> f32 {
+type Particles = [Particle; 32];
+
+pub fn dist(pos: Vec2, buffer: &Particles, len: usize) -> f32 {
     let mut idx = 0;
     let mut d: f32 = f32::INFINITY;
-    while idx < buffer.len() {
+    while idx < len {
         let p = &buffer[idx];
         d = d.min(p.dist(pos));
         idx += 1;
@@ -61,10 +62,10 @@ pub fn dist(pos: Vec2, buffer: &[Particle]) -> f32 {
     d
 }
 
-pub fn potential(pos: Vec2, buffer: &[Particle]) -> f32 {
+pub fn potential(pos: Vec2, buffer: &Particles, len: usize) -> f32 {
     let mut idx = 0;
     let mut v = 0.0;
-    while idx < buffer.len() {
+    while idx < len {
         let p = &buffer[idx];
         match p.potential(pos) {
             Ok(x) => v += x,
@@ -77,10 +78,10 @@ pub fn potential(pos: Vec2, buffer: &[Particle]) -> f32 {
     v
 }
 
-pub fn force(pos: Vec2, buffer: &[Particle]) -> f32 {
+pub fn force(pos: Vec2, buffer: &Particles, len: usize) -> f32 {
     let mut idx = 0;
     let mut e = 0.0;
-    while idx < buffer.len() {
+    while idx < len {
         let p = &buffer[idx];
         match p.force(pos) {
             Some(x) => e += x,

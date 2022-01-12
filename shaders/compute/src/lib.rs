@@ -21,18 +21,18 @@ use particle::*;
 #[spirv(fragment)]
 pub fn frag(
     #[spirv(frag_coord)] pos: Vec4,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] buffer: &mut [Particle],
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] buffer: &[Particle; 32],
     #[spirv(uniform, descriptor_set = 0, binding = 1)] constants: &ShaderConstants,
     output: &mut Vec4,
 ) {
-    if constants.empty != 0 {
+    if constants.len == 0 {
         *output = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
     let pos = pos.xy();
     let res = vec2(constants.width as f32, constants.height as f32);
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
-    let v = potential(pos, buffer).abs().clamp(0.0, 1.0);
+    let v = potential(pos, &*buffer, constants.len as usize).abs().clamp(0.0, 1.0);
     *output = vec4(v, v, v, 1.0);
 }
 
