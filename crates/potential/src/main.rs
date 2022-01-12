@@ -13,9 +13,6 @@ use poml::parser::ast;
 use common::*;
 use renderer::Renderer;
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
-
 struct App {
     time: f32,
     renderer: Renderer,
@@ -41,8 +38,8 @@ impl App {
         let mut app = App {
             time: 0.0,
             renderer: Renderer::new(ctx)?,
-            width: WIDTH,
-            height: HEIGHT,
+            width: ctx.width(),
+            height: ctx.height(),
             particles: Vec::new(),
             page: Page::Visualiser,
             editor_text: String::new(),
@@ -432,6 +429,9 @@ impl archie::event::EventHandler for App {
 
 async fn run() {
     archie::log::init();
+
+    const WIDTH: u32 = 800;
+    const HEIGHT: u32 = 600;
 
     let builder = archie::Context::builder()
         .title("Potential")
