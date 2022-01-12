@@ -1,3 +1,5 @@
+extern crate log as _log;
+
 mod context;
 mod helper;
 
