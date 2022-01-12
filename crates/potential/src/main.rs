@@ -107,13 +107,16 @@ impl App {
         }
     }
 
-    fn zoom(&mut self, zoom: f32) {
+    fn zoom(&mut self, zoom: f32, translate: bool) {
         // scale axis
         self.x_axis *= zoom;
         self.y_axis *= zoom;
+        
         // translate to keep mouse at the same x and y
-        self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
-        self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
+        if translate {
+            self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
+            self.y_axis -= -(self.mouse.y / zoom - self.mouse.y);
+        }
     }
 
     fn correct_y_axis(&mut self) {
@@ -367,11 +370,11 @@ impl archie::event::EventHandler for App {
         match (*modifiers, key) {
             (ModifiersState::CTRL, VirtualKeyCode::Equals) => {
                 // zoom in
-                self.zoom(0.9);
+                self.zoom(0.9, false);
             }
             (ModifiersState::CTRL, VirtualKeyCode::Minus) => {
                 // zoom out
-                self.zoom(1.1);
+                self.zoom(1.1, false);
             }
             _ => (),
         }
@@ -423,7 +426,7 @@ impl archie::event::EventHandler for App {
         // keep delta normalised
         let dy = dy.clamp(-1.0, 1.0);
         let zoom = (dy * ZOOM_INTENSITY).exp();
-        self.zoom(zoom);
+        self.zoom(zoom, true);
     }
 }
 
