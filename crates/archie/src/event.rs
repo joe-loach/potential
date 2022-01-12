@@ -32,7 +32,43 @@ pub trait EventHandler<E = ()> {
     fn raw_event(&mut self, event: &Event<E>) {}
 }
 
-pub fn run<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run<S, E>(ctx: Context, event_loop: EventLoop<E>, state: S) -> !
+where
+    S: EventHandler<E> + 'static,
+{
+    start(ctx, event_loop, state)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn run<S, E>(ctx: Context, event_loop: EventLoop<E>, state: S) -> !
+where
+    S: EventHandler<E> + 'static,
+{
+    use wasm_bindgen::{prelude::*, JsCast};
+
+    let start_closure = Closure::once_into_js(move || start(ctx, event_loop, state));
+
+    if let Err(error) = call_catch(&start_closure) {
+        let is_control_flow_exception = error.dyn_ref::<js_sys::Error>().map_or(false, |e| {
+            e.message().includes("Using exceptions for control flow", 0)
+        });
+
+        if !is_control_flow_exception {
+            web_sys::console::error_1(&error);
+        }
+    }
+
+    std::process::exit(0);
+
+    #[wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(catch, js_namespace = Function, js_name = "prototype.call.call")]
+        fn call_catch(this: &JsValue) -> Result<(), JsValue>;
+    }
+}
+
+fn start<S, E>(mut ctx: Context, event_loop: EventLoop<E>, mut state: S) -> !
 where
     S: EventHandler<E> + 'static,
 {
