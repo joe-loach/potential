@@ -4,8 +4,8 @@ mod axis;
 
 pub use axis::Axis;
 
-use spirv_std::glam;
 use glam::Vec2;
+use spirv_std::glam;
 
 pub fn map_pos(pos: Vec2, res: Vec2, x_axis: Axis, y_axis: Axis) -> Vec2 {
     // [0, a]

@@ -7,7 +7,7 @@ use archie::{
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
 use glam::{vec2, Vec2};
-use particle::{Particle};
+use particle::Particle;
 use poml::parser::ast;
 
 use common::*;

@@ -32,7 +32,9 @@ pub fn frag(
     let pos = pos.xy();
     let res = vec2(constants.width as f32, constants.height as f32);
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
-    let v = potential(pos, &*buffer, constants.len as usize).abs().clamp(0.0, 1.0);
+    let v = potential(pos, &*buffer, constants.len as usize)
+        .abs()
+        .clamp(0.0, 1.0);
     *output = vec4(v, v, v, 1.0);
 }
 
