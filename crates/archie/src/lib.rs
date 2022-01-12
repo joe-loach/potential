@@ -16,7 +16,12 @@ pub mod log {
         cfg_if::cfg_if! {
             if #[cfg(web)] {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-                let _ = wasm_logger::init(wasm_logger::Config::default());
+                let query_string = web_sys::window().unwrap().location().search().unwrap();
+                let level = super::helper::parse_url_query_string(&query_string, "RUST_LOG")
+                    .map(|x| x.parse().ok())
+                    .flatten()
+                    .unwrap_or(_log::Level::Error);
+                let _ = wasm_logger::init(wasm_logger::Config::new(level));
             } else {
                 let _ = env_logger::try_init();
             }
