@@ -13,6 +13,9 @@ use poml::parser::ast;
 use common::*;
 use renderer::Renderer;
 
+// TODO: write information to a egui texture
+// https://github.com/emilk/egui/blob/master/egui_glium/examples/native_texture.rs
+
 struct App {
     time: f32,
     renderer: Renderer,
@@ -108,7 +111,7 @@ impl App {
         // scale axis
         self.x_axis *= zoom;
         self.y_axis *= zoom;
-        
+
         // translate to keep mouse at the same x and y
         if translate {
             self.x_axis -= -(self.mouse.x / zoom - self.mouse.x);
@@ -159,32 +162,14 @@ impl archie::event::EventHandler for App {
         if self.page == Page::Visualiser {
             let device = ctx.device();
 
-            let particles = {
-                let mut particles = [Particle::default(); 32];
-                let slice = self.particles.as_slice();
-                particles[..slice.len()].copy_from_slice(slice);
-                let contents = bytemuck::cast_slice(&particles);
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: None,
-                    contents,
-                    usage: wgpu::BufferUsages::UNIFORM,
-                })
-            };
-            let constants = {
-                let constants = ShaderConstants::new(
-                    self.particles.len() as u32,
-                    self.width,
-                    self.height,
-                    self.x_axis,
-                    self.y_axis,
-                );
-                let contents = bytemuck::bytes_of(&constants);
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: None,
-                    contents,
-                    usage: wgpu::BufferUsages::UNIFORM,
-                })
-            };
+            self.renderer.update(
+                device,
+                &self.particles,
+                self.width,
+                self.height,
+                self.x_axis,
+                self.y_axis,
+            );
 
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
@@ -192,11 +177,11 @@ impl archie::event::EventHandler for App {
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: particles.as_entire_binding(),
+                        resource: self.renderer.particles(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: constants.as_entire_binding(),
+                        resource: self.renderer.constants(),
                     },
                 ],
             });
