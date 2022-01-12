@@ -159,21 +159,6 @@ impl archie::event::EventHandler for App {
         if self.page == Page::Visualiser {
             let device = ctx.device();
 
-            // let empty = self.particles.is_empty();
-            // let particles = {
-            //     let val = [Particle::new(0.0, 1.0, Vec2::ZERO)];
-            //     let contents = if empty {
-            //         bytemuck::cast_slice(&val)
-            //     } else {
-            //         bytemuck::cast_slice(&self.particles)
-            //     };
-
-            //     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            //         label: None,
-            //         contents,
-            //         usage: wgpu::BufferUsages::STORAGE,
-            //     })
-            // };
             let particles = {
                 let mut particles = [Particle::default(); 32];
                 let slice = self.particles.as_slice();
