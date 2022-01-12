@@ -11,7 +11,6 @@ web = ["archie/web"]
 
 [dependencies]
 archie = { path = "../archie" }
-poml = { path = "../poml" }
 particle = { path = "../particle" }
 common = { path = "../common" }
 # math
@@ -23,3 +22,5 @@ anyhow = "1.0.51"
 thiserror = "1.0.30"
 # byte conversion
 bytemuck = "1.7.3"
+# show nodes
+egui_nodes = { path = "../nodes" }

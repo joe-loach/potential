@@ -6,12 +6,23 @@ use spirv_std::glam;
 // USEFUL CONSTANTS
 pub const COULOMB: f32 = 8.987_552e9;
 pub const GRAVITATIONAL: f32 = 6.674_302e-11;
+
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub struct Particle {
     pub value: f32,
     pub radius: f32,
     pub pos: Vec2,
+}
+
+impl Default for Particle {
+    fn default() -> Self {
+        Self {
+            value: 1.0,
+            radius: 1.0,
+            pos: Default::default(),
+        }
+    }
 }
 
 impl Particle {

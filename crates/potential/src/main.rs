@@ -5,9 +5,9 @@ use archie::{
     egui, wgpu,
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
+use egui_nodes::{NodeArgs, NodeConstructor};
 use glam::{vec2, Vec2};
 use particle::Particle;
-use poml::parser::ast;
 
 use common::*;
 use renderer::Renderer;
@@ -18,11 +18,11 @@ use renderer::Renderer;
 struct App {
     time: f32,
     renderer: Renderer,
+    nodes: egui_nodes::Context,
     width: u32,
     height: u32,
     particles: Vec<Particle>,
     page: Page,
-    editor_text: String,
     mouse: Vec2,
     mouse_raw: Vec2,
     mouse_down: bool,
@@ -40,11 +40,11 @@ impl App {
         let mut app = App {
             time: 0.0,
             renderer: Renderer::new(ctx)?,
+            nodes: egui_nodes::Context::default(),
             width: ctx.width(),
             height: ctx.height(),
             particles: Vec::new(),
-            page: Page::Visualiser,
-            editor_text: String::new(),
+            page: Page::Potential,
             mouse: Vec2::ZERO,
             mouse_raw: Vec2::ZERO,
             mouse_down: false,
@@ -58,52 +58,6 @@ impl App {
         };
         app.correct_y_axis();
         Ok(app)
-    }
-
-    pub fn compile(&mut self) {
-        let parse = poml::compile(&self.editor_text);
-
-        match parse {
-            Ok(parse) => {
-                let root = parse.root();
-
-                self.particles.clear();
-                let mut variables = std::collections::HashMap::new();
-
-                for s in root.stmts() {
-                    match s.kind() {
-                        ast::StmtKind::Shape(shape) => {
-                            if let Some(value) = shape.value().map(|v| v.value()) {
-                                let name = shape.label().text().unwrap();
-                                variables.insert(name, value);
-                            }
-                        }
-                        ast::StmtKind::Object(object) => {
-                            let mut params = object.params().unwrap();
-                            let value = params.next_value().unwrap();
-                            let x = params.next_value().unwrap();
-                            let y = params.next_value().unwrap();
-                            let label = params.next_name().unwrap();
-
-                            if let Some(&radius) = variables.get(&label.text()) {
-                                self.particles.push(Particle::new(
-                                    value.value(),
-                                    radius,
-                                    Vec2::new(x.value(), y.value()),
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-            Err(errors) => {
-                // there was an error, print it out for now
-                eprintln!("Errors");
-                for e in errors {
-                    eprintln!("{}", e);
-                }
-            }
-        }
     }
 
     fn zoom(&mut self, zoom: f32, translate: bool) {
@@ -128,8 +82,8 @@ impl App {
 
 #[derive(PartialEq, Eq)]
 enum Page {
-    Visualiser,
-    Editor,
+    Potential,
+    Force,
 }
 
 impl archie::event::EventHandler for App {
@@ -139,7 +93,7 @@ impl archie::event::EventHandler for App {
         self.width = ctx.width();
         self.height = ctx.height();
 
-        if self.dragging && self.page == Page::Visualiser {
+        if self.dragging && self.page == Page::Potential {
             let orig_mouse = map_pos(
                 self.mouse_raw,
                 vec2(self.width as f32, self.height as f32),
@@ -158,7 +112,7 @@ impl archie::event::EventHandler for App {
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
     ) {
-        if self.page == Page::Visualiser {
+        if self.page == Page::Potential {
             let device = ctx.device();
 
             self.renderer.update(
@@ -210,25 +164,25 @@ impl archie::event::EventHandler for App {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
-                ui.label("Potential");
+                ui.label("Field Visualiser");
                 ui.separator();
 
                 if ui
-                    .selectable_label(self.page == Page::Visualiser, "Visualiser")
+                    .selectable_label(self.page == Page::Potential, "Potential")
                     .clicked()
                 {
-                    self.page = Page::Visualiser;
+                    self.page = Page::Potential;
                     if cfg!(target_arch = "wasm32") {
-                        ui.output().open_url("#visualiser");
+                        ui.output().open_url("#potential");
                     }
                 }
                 if ui
-                    .selectable_label(self.page == Page::Editor, "Editor")
+                    .selectable_label(self.page == Page::Force, "Force")
                     .clicked()
                 {
-                    self.page = Page::Editor;
+                    self.page = Page::Force;
                     if cfg!(target_arch = "wasm32") {
-                        ui.output().open_url("#editor");
+                        ui.output().open_url("#force");
                     }
                 }
 
@@ -238,6 +192,52 @@ impl archie::event::EventHandler for App {
                     }
                 })
             })
+        });
+
+        egui::SidePanel::right("right_panel").show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                if ui.button("New").clicked() {
+                    self.particles.push(Default::default());
+                }
+            });
+
+            {
+                use egui_nodes::ColorStyle::*;
+                let theme = &ctx.style().visuals;
+                self.nodes.style.colors[NodeBackground as usize] = theme.widgets.active.bg_fill;
+                self.nodes.style.colors[NodeBackgroundHovered as usize] =
+                    theme.widgets.hovered.bg_fill;
+                self.nodes.style.colors[TitleBar as usize] = theme.faint_bg_color;
+                self.nodes.style.colors[TitleBarHovered as usize] = theme.extreme_bg_color;
+                self.nodes.style.colors[TitleBarSelected as usize] = theme.selection.bg_fill;
+            }
+
+            let nodes = self.particles.iter_mut().enumerate().map(|(i, p)| {
+                NodeConstructor::new(
+                    i,
+                    NodeArgs {
+                        corner_rounding: Some(1.0),
+                        ..Default::default()
+                    },
+                )
+                .with_title(move |ui| ui.label(format!("Particle {}", i)))
+                .with_static_attribute(0, |ui| {
+                    ui.label("Value");
+                    ui.add(egui::DragValue::new(&mut p.value))
+                })
+                .with_static_attribute(0, |ui| {
+                    ui.label("Radius");
+                    ui.add(egui::DragValue::new(&mut p.radius))
+                })
+                .with_static_attribute(1, |ui| {
+                    ui.label("Position");
+                    let a = ui.add(egui::DragValue::new(&mut p.pos.x));
+                    let b = ui.add(egui::DragValue::new(&mut p.pos.y));
+                    a.union(b)
+                })
+            });
+
+            self.nodes.show(nodes, std::iter::empty(), ui);
         });
 
         {
@@ -279,72 +279,24 @@ impl archie::event::EventHandler for App {
             self.settings_open = open;
         }
 
-        match self.page {
-            Page::Editor => {
-                egui::TopBottomPanel::bottom("editor_bottom").show(ctx, |ui| {
-                    let layout =
-                        egui::Layout::top_down(egui::Align::Center).with_main_justify(true);
-                    ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
-                        if ui.button("Compile").clicked() {
-                            self.compile();
-                        }
-                    })
-                });
-
-                egui::CentralPanel::default().show(ctx, |ui| {
-                    egui::SidePanel::right("overview_panel")
-                        .min_width(300.0)
-                        .show_inside(ui, |ui| {
-                            ui.heading("Objects");
-                            egui::ScrollArea::vertical().show(ui, |ui| {
-                                for (i, obj) in self.particles.iter().enumerate() {
-                                    egui::CollapsingHeader::new(i.to_string())
-                                        .default_open(true)
-                                        .show(ui, |ui| {
-                                            ui.monospace(format!("radius: {:?}", obj.radius));
-                                            ui.monospace(format!("value: {}", obj.value));
-                                            ui.monospace(format!(
-                                                "pos: {{ x: {}, y: {} }}",
-                                                obj.pos.x, obj.pos.y
-                                            ));
-                                        });
-                                }
-                            });
-                        });
-
-                    let editor = egui::TextEdit::multiline(&mut self.editor_text)
-                        .desired_width(f32::INFINITY)
-                        .desired_rows(50)
-                        .code_editor();
-
-                    egui::ScrollArea::vertical()
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            ui.add(editor);
-                        })
-                });
-            }
-            Page::Visualiser => {
-                egui::Window::new("Info").resizable(false).show(ctx, |ui| {
-                    ui.small("Under cursor");
-                    ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-                    let pos = self.mouse;
-                    let arr = {
-                        let mut particles = [Particle::default(); 32];
-                        let slice = self.particles.as_slice();
-                        particles[..slice.len()].copy_from_slice(slice);
-                        particles
-                    };
-                    let len = self.particles.len();
-                    let d = particle::dist(pos, &arr, len);
-                    let v = particle::potential(pos, &arr, len);
-                    let e = particle::force(pos, &arr, len);
-                    ui.monospace(format!("distance (m): {}", d));
-                    ui.monospace(format!("potential (J/C): {}", v));
-                    ui.monospace(format!("force (N/C): {}", e));
-                });
-            }
-        }
+        egui::Window::new("Info").resizable(false).show(ctx, |ui| {
+            ui.small("Under cursor");
+            ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
+            let pos = self.mouse;
+            let arr = {
+                let mut particles = [Particle::default(); 32];
+                let slice = self.particles.as_slice();
+                particles[..slice.len()].copy_from_slice(slice);
+                particles
+            };
+            let len = self.particles.len();
+            let d = particle::dist(pos, &arr, len);
+            let v = particle::potential(pos, &arr, len);
+            let e = particle::force(pos, &arr, len);
+            ui.monospace(format!("distance (m): {}", d));
+            ui.monospace(format!("potential (J/C): {}", v));
+            ui.monospace(format!("force (N/C): {}", e));
+        });
     }
 
     fn key_down(&mut self, key: VirtualKeyCode, modifiers: &ModifiersState) {
@@ -399,7 +351,7 @@ impl archie::event::EventHandler for App {
     }
 
     fn wheel_moved(&mut self, _dx: f32, dy: f32) {
-        if self.page == Page::Editor {
+        if self.page == Page::Force {
             return;
         }
         // zoom into a point
