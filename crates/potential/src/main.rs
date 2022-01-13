@@ -1,3 +1,4 @@
+mod nodes;
 mod renderer;
 
 use anyhow::Result;
@@ -5,8 +6,8 @@ use archie::{
     egui, wgpu,
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
-use egui_nodes::{NodeArgs, NodeConstructor};
 use glam::{vec2, Vec2};
+use nodes::*;
 use particle::Particle;
 
 use common::*;
@@ -18,7 +19,6 @@ use renderer::Renderer;
 struct App {
     time: f32,
     renderer: Renderer,
-    nodes: egui_nodes::Context,
     width: u32,
     height: u32,
     particles: Vec<Particle>,
@@ -40,7 +40,6 @@ impl App {
         let mut app = App {
             time: 0.0,
             renderer: Renderer::new(ctx)?,
-            nodes: egui_nodes::Context::default(),
             width: ctx.width(),
             height: ctx.height(),
             particles: Vec::new(),
@@ -196,83 +195,73 @@ impl archie::event::EventHandler for App {
             ui.horizontal(|ui| {
                 ui.heading("Particles");
                 ui.with_layout(egui::Layout::right_to_left(), |ui| {
-                    if ui
-                        .button("➖")
-                        .on_hover_text("Delete selected node")
-                        .clicked()
-                    {
-                        if let Some(idx) = self.nodes.get_selected_nodes().pop() {
-                            self.particles.remove(idx);
-                        }
-                    }
                     if ui.button("➕").on_hover_text("Add a new Node").clicked() {
                         self.particles.push(Default::default());
                     }
                 });
             });
 
-            {
-                use egui_nodes::ColorStyle;
-                let scheme = if ctx.style().visuals.dark_mode {
-                    ColorStyle::colors_dark()
-                } else {
-                    ColorStyle::colors_light()
-                };
-                self.nodes.style.colors = scheme;
-            }
-
+            let remove_idx = std::rc::Rc::new(std::sync::Mutex::new(None));
             let nodes = self.particles.iter_mut().enumerate().map(|(i, p)| {
-                NodeConstructor::new(
-                    i,
-                    NodeArgs {
-                        corner_rounding: Some(1.0),
-                        ..Default::default()
-                    },
-                )
-                .with_title(move |ui| ui.label("Particle"))
-                .with_static_attribute(0, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Value");
-                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
-                            ui.add(egui::DragValue::new(&mut p.value))
+                let rm_idx = std::rc::Rc::clone(&remove_idx);
+                Node::new(format!("particle_{}", i), [100.0, 100.0])
+                    .with_header(move |ui| {
+                        ui.horizontal(|ui| {
+                            ui.strong("Particle");
+                            ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                                if ui
+                                    .button("➖")
+                                    .on_hover_text("Delete selected node")
+                                    .clicked()
+                                {
+                                    rm_idx.lock().unwrap().replace(i);
+                                }
+                            });
                         })
+                        .response
                     })
-                    .response
-                })
-                .with_static_attribute(1, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Radius");
-                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
-                            ui.add(
-                                egui::DragValue::new(&mut p.radius)
-                                    .clamp_range(f32::EPSILON..=f32::INFINITY),
-                            )
-                        })
-                    })
-                    .response
-                })
-                .with_static_attribute(2, |ui| {
-                    let x = ui
-                        .horizontal(|ui| {
+                    .with_body(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Value");
+                            ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                                ui.add(egui::DragValue::new(&mut p.value))
+                            })
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Radius");
+                            ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                                ui.add(
+                                    egui::DragValue::new(&mut p.radius)
+                                        .clamp_range(f32::EPSILON..=f32::INFINITY),
+                                )
+                            })
+                        });
+                        ui.horizontal(|ui| {
                             ui.label("X");
                             ui.with_layout(egui::Layout::right_to_left(), |ui| {
                                 ui.add(egui::DragValue::new(&mut p.pos.x))
                             })
-                        })
-                        .response;
-                    let y = ui
-                        .horizontal(|ui| {
+                        });
+                        ui.horizontal(|ui| {
                             ui.label("Y");
                             ui.with_layout(egui::Layout::right_to_left(), |ui| {
                                 ui.add(egui::DragValue::new(&mut p.pos.y))
                             })
                         })
-                        .response;
-                    x.union(y)
-                })
+                        .response
+                    })
             });
 
-            self.nodes.show(nodes, std::iter::empty(), ui);
+            egui::CentralPanel::default()
+                .frame(egui::Frame::none())
+                .show_inside(ui, |ui| {
+                    NodePanel::ui(nodes, ui);
+                });
+
+            let idx = remove_idx.lock().unwrap();
+            if let Some(&idx) = idx.as_ref() {
+                self.particles.remove(idx);
+            }
         });
 
         {
