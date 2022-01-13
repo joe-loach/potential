@@ -93,7 +93,7 @@ impl archie::event::EventHandler for App {
         self.width = ctx.width();
         self.height = ctx.height();
 
-        if self.dragging && self.page == Page::Potential {
+        if self.dragging {
             let orig_mouse = map_pos(
                 self.mouse_raw,
                 vec2(self.width as f32, self.height as f32),
@@ -387,9 +387,6 @@ impl archie::event::EventHandler for App {
     }
 
     fn wheel_moved(&mut self, _dx: f32, dy: f32) {
-        if self.page == Page::Force {
-            return;
-        }
         // zoom into a point
         const ZOOM_INTENSITY: f32 = 0.1;
         // keep delta normalised
