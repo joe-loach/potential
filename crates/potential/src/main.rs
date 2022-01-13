@@ -162,7 +162,7 @@ impl archie::event::EventHandler for App {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
-                ui.label("Field Visualiser");
+                ui.heading("Field Visualiser");
                 ui.separator();
 
                 if ui
@@ -194,7 +194,7 @@ impl archie::event::EventHandler for App {
 
         egui::SidePanel::right("right_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label("Particles");
+                ui.heading("Particles");
                 ui.with_layout(egui::Layout::right_to_left(), |ui| {
                     if ui
                         .button("➖")
