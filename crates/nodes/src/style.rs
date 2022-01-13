@@ -313,22 +313,27 @@ impl Style {
     }
 
     pub(crate) fn format_node(&self, node: &mut NodeData, args: NodeArgs) {
-        node.color_style.background =
-            args.background.unwrap_or(self.colors[ColorStyle::NodeBackground as usize]);
+        node.color_style.background = args
+            .background
+            .unwrap_or(self.colors[ColorStyle::NodeBackground as usize]);
         node.color_style.background_hovered = args
             .background_hovered
             .unwrap_or(self.colors[ColorStyle::NodeBackgroundHovered as usize]);
         node.color_style.background_selected = args
             .background_selected
             .unwrap_or(self.colors[ColorStyle::NodeBackgroundSelected as usize]);
-        node.color_style.outline =
-            args.outline.unwrap_or(self.colors[ColorStyle::NodeOutline as usize]);
-        node.color_style.titlebar =
-            args.titlebar.unwrap_or(self.colors[ColorStyle::TitleBar as usize]);
-        node.color_style.titlebar_hovered =
-            args.titlebar_hovered.unwrap_or(self.colors[ColorStyle::TitleBarHovered as usize]);
-        node.color_style.titlebar_selected =
-            args.titlebar_selected.unwrap_or(self.colors[ColorStyle::TitleBarSelected as usize]);
+        node.color_style.outline = args
+            .outline
+            .unwrap_or(self.colors[ColorStyle::NodeOutline as usize]);
+        node.color_style.titlebar = args
+            .titlebar
+            .unwrap_or(self.colors[ColorStyle::TitleBar as usize]);
+        node.color_style.titlebar_hovered = args
+            .titlebar_hovered
+            .unwrap_or(self.colors[ColorStyle::TitleBarHovered as usize]);
+        node.color_style.titlebar_selected = args
+            .titlebar_selected
+            .unwrap_or(self.colors[ColorStyle::TitleBarSelected as usize]);
         node.layout_style.corner_rounding =
             args.corner_rounding.unwrap_or(self.node_corner_rounding);
         node.layout_style.padding = args.padding.unwrap_or_else(|| {
@@ -341,17 +346,21 @@ impl Style {
     pub(crate) fn format_pin(&self, pin: &mut PinData, args: PinArgs, flags: usize) {
         pin.shape = args.shape;
         pin.flags = args.flags.unwrap_or(flags);
-        pin.color_style.background =
-            args.background.unwrap_or(self.colors[ColorStyle::Pin as usize]);
-        pin.color_style.hovered =
-            args.hovered.unwrap_or(self.colors[ColorStyle::PinHovered as usize]);
+        pin.color_style.background = args
+            .background
+            .unwrap_or(self.colors[ColorStyle::Pin as usize]);
+        pin.color_style.hovered = args
+            .hovered
+            .unwrap_or(self.colors[ColorStyle::PinHovered as usize]);
     }
 
     pub(crate) fn format_link(&self, link: &mut LinkData, args: LinkArgs) {
         link.color_style.base = args.base.unwrap_or(self.colors[ColorStyle::Link as usize]);
-        link.color_style.hovered =
-            args.hovered.unwrap_or(self.colors[ColorStyle::LinkHovered as usize]);
-        link.color_style.selected =
-            args.selected.unwrap_or(self.colors[ColorStyle::LinkSelected as usize]);
+        link.color_style.hovered = args
+            .hovered
+            .unwrap_or(self.colors[ColorStyle::LinkHovered as usize]);
+        link.color_style.selected = args
+            .selected
+            .unwrap_or(self.colors[ColorStyle::LinkSelected as usize]);
     }
 }

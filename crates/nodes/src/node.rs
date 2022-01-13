@@ -92,7 +92,9 @@ impl NodeData {
 
     #[inline]
     pub fn get_node_title_rect(&self) -> egui::Rect {
-        let expanded_title_rect = self.title_bar_content_rect.expand2(self.layout_style.padding);
+        let expanded_title_rect = self
+            .title_bar_content_rect
+            .expand2(self.layout_style.padding);
         egui::Rect::from_min_max(
             expanded_title_rect.min,
             expanded_title_rect.min + egui::vec2(self.rect.width(), expanded_title_rect.height()),
@@ -152,7 +154,8 @@ impl<'a, 'b> NodeConstructor<'a> {
         args: PinArgs,
         attribute: impl FnOnce(&mut egui::Ui) -> egui::Response + 'a,
     ) -> Self {
-        self.attributes.push((id, AttributeType::Input, args, Box::new(attribute)));
+        self.attributes
+            .push((id, AttributeType::Input, args, Box::new(attribute)));
         self
     }
     /// Add an output attibute to a node, this attribute can be connected to input attributes of other nodes
@@ -164,7 +167,8 @@ impl<'a, 'b> NodeConstructor<'a> {
         args: PinArgs,
         attribute: impl FnOnce(&mut egui::Ui) -> egui::Response + 'a,
     ) -> Self {
-        self.attributes.push((id, AttributeType::Output, args, Box::new(attribute)));
+        self.attributes
+            .push((id, AttributeType::Output, args, Box::new(attribute)));
         self
     }
     /// Add a static attibute to a node, this attribute can't be connected to any other attributes
