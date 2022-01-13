@@ -157,7 +157,7 @@ impl archie::event::EventHandler for App {
             pass.draw(0..3, 0..1);
         }
     }
-    
+
     fn ui(&mut self, ctx: &egui::CtxRef) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
