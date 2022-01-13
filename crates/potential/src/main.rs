@@ -212,14 +212,13 @@ impl archie::event::EventHandler for App {
             });
 
             {
-                use egui_nodes::ColorStyle::*;
-                let theme = &ctx.style().visuals;
-                self.nodes.style.colors[NodeBackground as usize] = theme.widgets.active.bg_fill;
-                self.nodes.style.colors[NodeBackgroundHovered as usize] =
-                    theme.widgets.hovered.bg_fill;
-                self.nodes.style.colors[TitleBar as usize] = theme.faint_bg_color;
-                self.nodes.style.colors[TitleBarHovered as usize] = theme.extreme_bg_color;
-                self.nodes.style.colors[TitleBarSelected as usize] = theme.selection.bg_fill;
+                use egui_nodes::ColorStyle;
+                let scheme = if ctx.style().visuals.dark_mode {
+                    ColorStyle::colors_dark()
+                } else {
+                    ColorStyle::colors_light()
+                };
+                self.nodes.style.colors = scheme;
             }
 
             let nodes = self.particles.iter_mut().enumerate().map(|(i, p)| {
