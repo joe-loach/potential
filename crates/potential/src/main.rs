@@ -112,54 +112,52 @@ impl archie::event::EventHandler for App {
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
     ) {
-        if self.page == Page::Potential {
-            let device = ctx.device();
+        let device = ctx.device();
 
-            self.renderer.update(
-                device,
-                &self.particles,
-                self.width,
-                self.height,
-                self.x_axis,
-                self.y_axis,
-            );
+        self.renderer.update(
+            device,
+            &self.particles,
+            self.width,
+            self.height,
+            self.x_axis,
+            self.y_axis,
+        );
 
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: self.renderer.bind_group_layout(),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.renderer.particles(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.renderer.constants(),
+                },
+            ],
+        });
+
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                layout: self.renderer.bind_group_layout(),
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.renderer.particles(),
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: target,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: true,
                     },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: self.renderer.constants(),
-                    },
-                ],
+                }],
+                depth_stencil_attachment: None,
             });
 
-            {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: target,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Load,
-                            store: true,
-                        },
-                    }],
-                    depth_stencil_attachment: None,
-                });
-
-                pass.set_pipeline(self.renderer.pipeline());
-                pass.set_bind_group(0, &bind_group, &[]);
-                pass.draw(0..3, 0..1);
-            }
+            pass.set_pipeline(self.renderer.pipeline());
+            pass.set_bind_group(0, &bind_group, &[]);
+            pass.draw(0..3, 0..1);
         }
     }
-
+    
     fn ui(&mut self, ctx: &egui::CtxRef) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -222,18 +220,44 @@ impl archie::event::EventHandler for App {
                 )
                 .with_title(move |ui| ui.label(format!("Particle {}", i)))
                 .with_static_attribute(0, |ui| {
-                    ui.label("Value");
-                    ui.add(egui::DragValue::new(&mut p.value))
-                })
-                .with_static_attribute(0, |ui| {
-                    ui.label("Radius");
-                    ui.add(egui::DragValue::new(&mut p.radius))
+                    ui.horizontal(|ui| {
+                        ui.label("Value");
+                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                            ui.add(egui::DragValue::new(&mut p.value))
+                        })
+                    })
+                    .response
                 })
                 .with_static_attribute(1, |ui| {
-                    ui.label("Position");
-                    let a = ui.add(egui::DragValue::new(&mut p.pos.x));
-                    let b = ui.add(egui::DragValue::new(&mut p.pos.y));
-                    a.union(b)
+                    ui.horizontal(|ui| {
+                        ui.label("Radius");
+                        ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                            ui.add(
+                                egui::DragValue::new(&mut p.radius)
+                                    .clamp_range(f32::EPSILON..=f32::INFINITY),
+                            )
+                        })
+                    })
+                    .response
+                })
+                .with_static_attribute(2, |ui| {
+                    let x = ui
+                        .horizontal(|ui| {
+                            ui.label("X");
+                            ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                                ui.add(egui::DragValue::new(&mut p.pos.x))
+                            })
+                        })
+                        .response;
+                    let y = ui
+                        .horizontal(|ui| {
+                            ui.label("Y");
+                            ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                                ui.add(egui::DragValue::new(&mut p.pos.y))
+                            })
+                        })
+                        .response;
+                    x.union(y)
                 })
             });
 
