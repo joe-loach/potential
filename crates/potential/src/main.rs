@@ -230,7 +230,7 @@ impl archie::event::EventHandler for App {
                         ..Default::default()
                     },
                 )
-                .with_title(move |ui| ui.label(format!("Particle {}", i)))
+                .with_title(move |ui| ui.label("Particle"))
                 .with_static_attribute(0, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Value");
