@@ -193,10 +193,22 @@ impl archie::event::EventHandler for App {
         });
 
         egui::SidePanel::right("right_panel").show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                if ui.button("New").clicked() {
-                    self.particles.push(Default::default());
-                }
+            ui.horizontal(|ui| {
+                ui.label("Particles");
+                ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                    if ui
+                        .button("➖")
+                        .on_hover_text("Delete selected node")
+                        .clicked()
+                    {
+                        if let Some(idx) = self.nodes.get_selected_nodes().pop() {
+                            self.particles.remove(idx);
+                        }
+                    }
+                    if ui.button("➕").on_hover_text("Add a new Node").clicked() {
+                        self.particles.push(Default::default());
+                    }
+                });
             });
 
             {
