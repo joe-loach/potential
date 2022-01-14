@@ -163,6 +163,10 @@ impl archie::event::EventHandler for App {
             self.renderer.update(
                 device,
                 &self.particles,
+                match self.page {
+                    Page::Potential => Field::Potential,
+                    Page::Force => Field::Force,
+                },
                 glam::uvec2(width, height),
                 self.x_axis,
                 self.y_axis,
@@ -381,7 +385,7 @@ impl archie::event::EventHandler for App {
                 particles
             };
             let len = self.particles.len();
-            let d = particle::dist(pos, &arr, len);
+            let d = particle::dist(pos, &arr, len).unwrap_or(0.0);
             let v = particle::potential(pos, &arr, len);
             let e = particle::force(pos, &arr, len);
             ui.monospace(format!("distance (m): {}", d));

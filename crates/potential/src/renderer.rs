@@ -64,19 +64,21 @@ impl Renderer {
         &mut self,
         device: &wgpu::Device,
         particles: &[Particle],
+        field: Field,
         size: UVec2,
         x_axis: Axis,
         y_axis: Axis,
     ) {
         // constants: &ShaderConstants
         self.constants = {
-            let constants = ShaderConstants::new(
-                particles.len() as u32,
-                size.x as u32,
-                size.y as u32,
+            let constants = ShaderConstants {
+                field,
+                len: particles.len() as u32,
+                width: size.x as u32,
+                height: size.y as u32,
                 x_axis,
                 y_axis,
-            );
+            };
             let contents = bytemuck::bytes_of(&constants);
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("constants_uniform"),
@@ -156,7 +158,7 @@ fn pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &module,
-            entry_point: "frag",
+            entry_point: "field",
             targets: &[wgpu::ColorTargetState {
                 format: wgpu::TextureFormat::Rgba8UnormSrgb,
                 blend: None,

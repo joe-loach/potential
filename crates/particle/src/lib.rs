@@ -62,15 +62,18 @@ unsafe impl bytemuck::Pod for Particle {}
 
 type Particles = [Particle; 32];
 
-pub fn dist(pos: Vec2, buffer: &Particles, len: usize) -> f32 {
+pub fn dist(pos: Vec2, buffer: &Particles, len: usize) -> Option<f32> {
     let mut idx = 0;
-    let mut d: f32 = f32::INFINITY;
+    let mut d: f32 = f32::MAX;
+    if len == 0 {
+        return None;
+    }
     while idx < len {
         let p = &buffer[idx];
         d = d.min(p.dist(pos));
         idx += 1;
     }
-    d
+    Some(d)
 }
 
 pub fn potential(pos: Vec2, buffer: &Particles, len: usize) -> f32 {
