@@ -33,6 +33,8 @@ struct App {
     texture: wgpu::Texture,
     texture_id: egui::TextureId,
     texture_size: UVec2,
+    texture_pos: Vec2,
+    on_image: bool,
 }
 
 impl App {
@@ -71,13 +73,18 @@ impl App {
             settings_open: false,
             texture,
             texture_id,
-            texture_size: uvec2(ctx.width(), ctx.height()),
+            texture_size: uvec2(100, 100),
+            texture_pos: vec2(0.0, 0.0),
+            on_image: false,
         };
         app.correct_y_axis();
         Ok(app)
     }
 
     fn zoom(&mut self, zoom: f32, translate: bool) {
+        if !self.on_image {
+            return;
+        }
         // scale axis
         self.x_axis *= zoom;
         self.y_axis *= zoom;
@@ -90,8 +97,8 @@ impl App {
     }
 
     fn correct_y_axis(&mut self) {
-        let w = self.width as f32;
-        let h = self.height as f32;
+        let w = self.texture_size.x as f32;
+        let h = self.texture_size.y as f32;
         let ratio = (w / h).min(h / w);
         self.y_axis = self.x_axis * ratio;
     }
@@ -110,10 +117,10 @@ impl archie::event::EventHandler for App {
         self.width = ctx.width();
         self.height = ctx.height();
 
-        if self.dragging {
+        if self.dragging && self.on_image {
             let orig_mouse = map_pos(
                 self.mouse_raw,
-                vec2(self.width as f32, self.height as f32),
+                vec2(self.texture_size.x as f32, self.texture_size.y as f32),
                 self.x_axis_before,
                 self.y_axis_before,
             );
@@ -130,11 +137,12 @@ impl archie::event::EventHandler for App {
         _: &wgpu::TextureView,
     ) {
         // round to correct alignment
-        let round_up = |x: u32, r: u32| (x + (r - 1)) / r * r;
-        let width = round_up(self.texture_size.x, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        // let round_up = |x: u32, r: u32| (x + (r - 1)) / r * r;
+        // let width = round_up(self.texture_size.x, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        let width = self.texture_size.y;
         let height = self.texture_size.y;
 
-        // resize texture to make copy happy
+        // resize texture to make computation easier
         self.texture = ctx.device().create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
@@ -310,7 +318,12 @@ impl archie::event::EventHandler for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             let size = ui.available_size();
             self.texture_size = uvec2(size.x as u32, size.y as u32);
-            ui.image(self.texture_id, size)
+            let image = ui.image(self.texture_id, size);
+            self.texture_pos = {
+                let top_left = image.rect.min;
+                vec2(top_left.x, top_left.y)
+            };
+            self.on_image = image.hovered();
         });
 
         {
@@ -404,8 +417,8 @@ impl archie::event::EventHandler for App {
         let pos = Vec2::new(x as f32, y as f32);
         self.mouse_raw = pos;
         self.mouse = map_pos(
-            pos,
-            vec2(self.width as f32, self.height as f32),
+            pos - self.texture_pos,
+            vec2(self.texture_size.x as f32, self.texture_size.y as f32),
             self.x_axis,
             self.y_axis,
         );
