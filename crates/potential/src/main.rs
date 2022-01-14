@@ -318,12 +318,16 @@ impl archie::event::EventHandler for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             let size = ui.available_size();
             self.texture_size = uvec2(size.x as u32, size.y as u32);
-            let image = ui.image(self.texture_id, size);
+            let image = ui.add(
+                egui::Image::new(self.texture_id, size)
+                    .sense(egui::Sense::focusable_noninteractive()),
+            );
+            let rect = image.rect;
             self.texture_pos = {
-                let top_left = image.rect.min;
+                let top_left = rect.min;
                 vec2(top_left.x, top_left.y)
             };
-            self.on_image = image.hovered();
+            self.on_image = ui.rect_contains_pointer(rect) && !ctx.wants_pointer_input();
         });
 
         {
