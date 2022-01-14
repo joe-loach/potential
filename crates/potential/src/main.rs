@@ -334,6 +334,7 @@ impl archie::event::EventHandler for App {
             let mut open = self.settings_open;
             egui::Window::new("Settings")
                 .open(&mut open)
+                .default_width(200.0)
                 .show(ctx, |ui| {
                     ui.label("X axis");
                     ui.horizontal(|ui| {
