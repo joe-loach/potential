@@ -13,7 +13,7 @@ pub trait EventHandler<E = ()> {
     fn update(&mut self, ctx: &Context, dt: f32);
     fn draw(
         &mut self,
-        ctx: &Context,
+        ctx: &mut Context,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
     );
@@ -120,7 +120,7 @@ where
                 let current = instant::Instant::now();
                 let elapsed = current - last;
                 state.update(&ctx, elapsed.as_secs_f32());
-                state.draw(&ctx, &mut encoder, &view);
+                state.draw(&mut ctx, &mut encoder, &view);
 
                 egui_render(&mut ctx, &mut encoder, &view, |ctx| state.ui(ctx));
 

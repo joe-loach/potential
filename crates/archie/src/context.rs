@@ -45,6 +45,33 @@ impl Context {
     }
 }
 
+impl Context {
+    pub fn egui_register_texture(
+        &mut self,
+        texture: &wgpu::Texture,
+        filter: wgpu::FilterMode,
+    ) -> egui::TextureId {
+        self.egui_render_pass
+            .egui_texture_from_wgpu_texture(&self.device, texture, filter)
+    }
+
+    pub fn egui_update_texture(
+        &mut self,
+        texture: &wgpu::Texture,
+        filter: wgpu::FilterMode,
+        id: egui::TextureId,
+    ) {
+        // discard errors
+        // TODO: care?
+        let _ = self.egui_render_pass.update_egui_texture_from_wgpu_texture(
+            &self.device,
+            texture,
+            filter,
+            id,
+        );
+    }
+}
+
 pub struct ContextBuilder {
     title: String,
     width: u32,

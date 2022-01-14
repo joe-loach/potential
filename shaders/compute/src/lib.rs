@@ -21,8 +21,8 @@ use particle::*;
 #[spirv(fragment)]
 pub fn frag(
     #[spirv(frag_coord)] pos: Vec4,
-    #[spirv(uniform, descriptor_set = 0, binding = 0)] buffer: &[Particle; 32],
-    #[spirv(uniform, descriptor_set = 0, binding = 1)] constants: &ShaderConstants,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] constants: &ShaderConstants,
+    #[spirv(uniform, descriptor_set = 0, binding = 1)] particles: &[Particle; 32],
     output: &mut Vec4,
 ) {
     if constants.len == 0 {
@@ -32,7 +32,7 @@ pub fn frag(
     let pos = pos.xy();
     let res = vec2(constants.width as f32, constants.height as f32);
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
-    let v = potential(pos, &*buffer, constants.len as usize)
+    let v = potential(pos, particles, constants.len as usize)
         .abs()
         .clamp(0.0, 1.0);
     *output = vec4(v, v, v, 1.0);

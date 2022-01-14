@@ -6,15 +6,12 @@ use archie::{
     egui, wgpu,
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
-use glam::{vec2, Vec2};
+use glam::*;
 use nodes::*;
 use particle::Particle;
 
 use common::*;
 use renderer::Renderer;
-
-// TODO: write information to a egui texture
-// https://github.com/emilk/egui/blob/master/egui_glium/examples/native_texture.rs
 
 struct App {
     time: f32,
@@ -33,10 +30,28 @@ struct App {
     x_axis_before: Axis,
     y_axis_before: Axis,
     settings_open: bool,
+    texture: wgpu::Texture,
+    texture_id: egui::TextureId,
+    texture_size: UVec2,
 }
 
 impl App {
     pub fn new(ctx: &mut archie::Context) -> Result<Self> {
+        let texture = ctx.device().create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: ctx.width(),
+                height: ctx.height(),
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        });
+        let texture_id = ctx.egui_register_texture(&texture, wgpu::FilterMode::Linear);
+
         let mut app = App {
             time: 0.0,
             renderer: Renderer::new(ctx)?,
@@ -54,6 +69,9 @@ impl App {
             x_axis_before: Axis::new(-1.0, 1.0),
             y_axis_before: Axis::new(-1.0, 1.0),
             settings_open: false,
+            texture,
+            texture_id,
+            texture_size: uvec2(ctx.width(), ctx.height()),
         };
         app.correct_y_axis();
         Ok(app)
@@ -107,41 +125,65 @@ impl archie::event::EventHandler for App {
 
     fn draw(
         &mut self,
-        ctx: &archie::Context,
+        ctx: &mut archie::Context,
         encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
+        _: &wgpu::TextureView,
     ) {
-        let device = ctx.device();
+        // round to correct alignment
+        let round_up = |x: u32, r: u32| (x + (r - 1)) / r * r;
+        let width = round_up(self.texture_size.x, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        let height = self.texture_size.y;
 
-        self.renderer.update(
-            device,
-            &self.particles,
-            self.width,
-            self.height,
-            self.x_axis,
-            self.y_axis,
-        );
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        // resize texture to make copy happy
+        self.texture = ctx.device().create_texture(&wgpu::TextureDescriptor {
             label: None,
-            layout: self.renderer.bind_group_layout(),
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.renderer.particles(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.renderer.constants(),
-                },
-            ],
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         });
 
+        let bind_group = {
+            let device = ctx.device();
+            // update the renderer with latest information
+            self.renderer.update(
+                device,
+                &self.particles,
+                glam::uvec2(width, height),
+                self.x_axis,
+                self.y_axis,
+            );
+            // make a new bind group
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: self.renderer.bind_group_layout(),
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self.renderer.constants(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.renderer.particles(),
+                    },
+                ],
+            })
+        };
+        // run shader
         {
+            let view = &self
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: target,
+                    view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,
@@ -150,11 +192,12 @@ impl archie::event::EventHandler for App {
                 }],
                 depth_stencil_attachment: None,
             });
-
             pass.set_pipeline(self.renderer.pipeline());
             pass.set_bind_group(0, &bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
+        // update the egui texture
+        ctx.egui_update_texture(&self.texture, wgpu::FilterMode::Linear, self.texture_id);
     }
 
     fn ui(&mut self, ctx: &egui::CtxRef) {
@@ -262,6 +305,12 @@ impl archie::event::EventHandler for App {
             if let Some(&idx) = idx.as_ref() {
                 self.particles.remove(idx);
             }
+        });
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let size = ui.available_size();
+            self.texture_size = uvec2(size.x as u32, size.y as u32);
+            ui.image(self.texture_id, size)
         });
 
         {

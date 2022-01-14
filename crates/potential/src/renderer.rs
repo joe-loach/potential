@@ -1,6 +1,7 @@
 use anyhow::Result;
 use archie::wgpu::{self, util::DeviceExt};
 use common::*;
+use glam::*;
 use particle::Particle;
 
 pub struct Renderer {
@@ -17,6 +18,7 @@ impl Renderer {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
+                // constants: &ShaderConstants
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::FRAGMENT,
@@ -27,6 +29,7 @@ impl Renderer {
                     },
                     count: None,
                 },
+                // particles: &[Particle; 32]
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
@@ -61,27 +64,36 @@ impl Renderer {
         &mut self,
         device: &wgpu::Device,
         particles: &[Particle],
-        width: u32,
-        height: u32,
+        size: UVec2,
         x_axis: Axis,
         y_axis: Axis,
     ) {
-        self.particles = {
-            let mut buf = [Particle::default(); 32];
-            buf[..particles.len().min(32)].copy_from_slice(particles);
-            let contents = bytemuck::cast_slice(&buf);
+        // constants: &ShaderConstants
+        self.constants = {
+            let constants = ShaderConstants::new(
+                particles.len() as u32,
+                size.x as u32,
+                size.y as u32,
+                x_axis,
+                y_axis,
+            );
+            let contents = bytemuck::bytes_of(&constants);
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("constants_uniform"),
                 contents,
                 usage: wgpu::BufferUsages::UNIFORM,
             })
         };
-        self.constants = {
-            let constants =
-                ShaderConstants::new(particles.len() as u32, width, height, x_axis, y_axis);
-            let contents = bytemuck::bytes_of(&constants);
+        // particles: &[Particle; 32]
+        self.particles = {
+            let particles = {
+                let mut buf = [Particle::default(); 32];
+                buf[..particles.len().min(32)].copy_from_slice(particles);
+                buf
+            };
+            let contents = bytemuck::cast_slice(&particles);
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("particle_uniform"),
                 contents,
                 usage: wgpu::BufferUsages::UNIFORM,
             })
@@ -108,7 +120,7 @@ impl Renderer {
 fn pipeline(
     device: &wgpu::Device,
     layout: &wgpu::PipelineLayout,
-    format: wgpu::TextureFormat,
+    _format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
     let desc = {
         let spirv = include_bytes!("shaders/compute.spv");
@@ -146,7 +158,7 @@ fn pipeline(
             module: &module,
             entry_point: "frag",
             targets: &[wgpu::ColorTargetState {
-                format,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
                 blend: None,
                 write_mask: wgpu::ColorWrites::all(),
             }],
