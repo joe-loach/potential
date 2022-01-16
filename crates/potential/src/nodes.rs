@@ -68,7 +68,6 @@ impl NodePanel {
         for (i, node) in nodes.into_iter().enumerate() {
             let id = ui.id().with(i);
             let pos = position(&windows);
-            // println!("chosen pos = {:?}", pos - available_rect.min);
             let response = node.window(id, pos, ui);
             windows.push(response.rect);
         }
