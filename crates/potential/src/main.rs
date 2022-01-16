@@ -77,7 +77,7 @@ impl App {
             texture_pos: vec2(0.0, 0.0),
             on_image: false,
             settings_open: false,
-            help_open: true,
+            help_open: false,
         };
         app.correct_y_axis();
         Ok(app)
@@ -121,7 +121,7 @@ impl archie::event::EventHandler for App {
 
         if self.dragging && self.on_image {
             let orig_mouse = map_pos(
-                self.mouse_raw,
+                self.mouse_raw - self.texture_pos,
                 vec2(self.texture_size.x as f32, self.texture_size.y as f32),
                 self.x_axis_before,
                 self.y_axis_before,
