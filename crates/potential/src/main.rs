@@ -29,12 +29,13 @@ struct App {
     y_axis: Axis,
     x_axis_before: Axis,
     y_axis_before: Axis,
-    settings_open: bool,
     texture: wgpu::Texture,
     texture_id: egui::TextureId,
     texture_size: UVec2,
     texture_pos: Vec2,
     on_image: bool,
+    settings_open: bool,
+    help_open: bool,
 }
 
 impl App {
@@ -70,12 +71,13 @@ impl App {
             y_axis: Axis::new(-1.0, 1.0),
             x_axis_before: Axis::new(-1.0, 1.0),
             y_axis_before: Axis::new(-1.0, 1.0),
-            settings_open: false,
             texture,
             texture_id,
             texture_size: uvec2(100, 100),
             texture_pos: vec2(0.0, 0.0),
             on_image: false,
+            settings_open: false,
+            help_open: true,
         };
         app.correct_y_axis();
         Ok(app)
@@ -242,6 +244,13 @@ impl archie::event::EventHandler for App {
                     if ui.button("🔧").on_hover_text("Settings").clicked() {
                         self.settings_open = !self.settings_open;
                     }
+                    if ui
+                        .button("Help")
+                        .on_hover_text("Opens help dialogue")
+                        .clicked()
+                    {
+                        self.help_open = !self.help_open;
+                    }
                 })
             })
         });
@@ -372,6 +381,35 @@ impl archie::event::EventHandler for App {
                     }
                 });
             self.settings_open = open;
+        }
+
+        {
+            let mut open = self.help_open;
+            egui::Window::new("Help").open(&mut open).show(ctx, |ui| {
+                egui::CollapsingHeader::new("Usage")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        ui.label(
+                            "Add particles in the right side bar by clicking the ➕.\n\
+                            Edit the values of each particle to suit your needs.\n\
+                            After any particle is added, the visualiser should show it.\n\
+                            Move around the field by dragging the mouse with LMB held.\n\
+                            Zoom into a point using the scroll wheel.\n\
+                            Zoom into the center using Ctrl + (- =)\n\
+                            ",
+                        );
+                    });
+                ui.collapsing("Fields", |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.heading("Distance");
+                        ui.separator();
+                        ui.heading("Potential");
+                        ui.separator();
+                        ui.heading("Force");
+                    });
+                });
+            });
+            self.help_open = open;
         }
 
         egui::Window::new("Info").resizable(false).show(ctx, |ui| {
