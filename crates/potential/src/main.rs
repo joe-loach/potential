@@ -259,7 +259,7 @@ impl archie::event::EventHandler for App {
             let remove_idx = std::rc::Rc::new(std::sync::Mutex::new(None));
             let nodes = self.particles.iter_mut().enumerate().map(|(i, p)| {
                 let rm_idx = std::rc::Rc::clone(&remove_idx);
-                Node::new(format!("particle_{}", i), [100.0, 100.0])
+                Node::new()
                     .with_header(move |ui| {
                         ui.horizontal(|ui| {
                             ui.strong("Particle");
