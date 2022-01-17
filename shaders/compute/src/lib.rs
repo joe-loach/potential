@@ -34,15 +34,11 @@ pub fn field(
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
     let len = constants.len as usize;
     let x = match constants.field {
-        Field::Distance => particle::dist(pos, particles, len)
-            .unwrap_or(0.0)
-            .abs()
-            .clamp(0.0, 1.0),
-        Field::Potential => particle::potential(pos, particles, len)
-            .abs()
-            .clamp(0.0, 1.0),
-        Field::Force => particle::force(pos, particles, len).abs().clamp(0.0, 1.0),
+        Field::Distance => particle::dist(pos, particles, len).unwrap_or(0.0),
+        Field::Potential => particle::potential(pos, particles, len),
+        Field::Force => particle::force(pos, particles, len),
     };
+    let x = x.abs().clamp(0.0, 1.0);
 
     *output = vec4(x, x, x, 1.0);
 }
