@@ -19,7 +19,7 @@ use common::*;
 use particle::*;
 
 fn norm(a: f32, b: f32, t: f32) -> f32 {
-    let t = t.clamp(a, b); // [a, b]
+    let t = t.min(b).max(a); // [a, b]
     (t - a) / (b - a) // [0, 1]
 }
 
