@@ -416,7 +416,7 @@ impl archie::event::EventHandler for App {
             let arr = {
                 let mut particles = [Particle::default(); 32];
                 let slice = self.particles.as_slice();
-                particles[..slice.len()].copy_from_slice(slice);
+                particles[..slice.len().min(32)].copy_from_slice(slice);
                 particles
             };
             let len = self.particles.len();
