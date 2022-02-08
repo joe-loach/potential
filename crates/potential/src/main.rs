@@ -138,9 +138,6 @@ impl archie::event::EventHandler for App {
         encoder: &mut wgpu::CommandEncoder,
         _: &wgpu::TextureView,
     ) {
-        // round to correct alignment
-        // let round_up = |x: u32, r: u32| (x + (r - 1)) / r * r;
-        // let width = round_up(self.texture_size.x, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         let width = self.texture_size.y;
         let height = self.texture_size.y;
 
