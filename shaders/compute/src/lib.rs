@@ -18,11 +18,21 @@ use spirv_std::glam::*;
 use common::*;
 use particle::*;
 
+fn norm(a: f32, b: f32, t: f32) -> f32 {
+    let t = t.clamp(a, b); // [a, b]
+    (t - a) / (b - a) // [0, 1]
+}
+
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    (1.0 - t) * a + t * b
+}
+
 #[spirv(fragment)]
 pub fn field(
     #[spirv(frag_coord)] pos: Vec4,
     #[spirv(uniform, descriptor_set = 0, binding = 0)] constants: &ShaderConstants,
     #[spirv(uniform, descriptor_set = 0, binding = 1)] particles: &[Particle; 32],
+    #[spirv(uniform, descriptor_set = 0, binding = 2)] colors: &[ColorVal; 2],
     output: &mut Vec4,
 ) {
     if constants.len == 0 {
@@ -33,14 +43,18 @@ pub fn field(
     let res = vec2(constants.width as f32, constants.height as f32);
     let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
     let len = constants.len as usize;
-    let x = match constants.field {
+    let t = match constants.field {
         Field::Distance => particle::dist(pos, particles, len).unwrap_or(0.0),
         Field::Potential => particle::potential(pos, particles, len),
         Field::Force => particle::force(pos, particles, len),
     };
-    let x = x.abs().clamp(0.0, 1.0);
-
-    *output = vec4(x, x, x, 1.0);
+    let a = colors[0];
+    let b = colors[1];
+    let t = norm(a.val, b.val, t);
+    let r = lerp(a.r, b.r, t);
+    let g = lerp(a.g, b.g, t);
+    let b = lerp(a.b, b.b, t);
+    *output = vec4(r, g, b, 1.0);
 }
 
 #[spirv(vertex)]

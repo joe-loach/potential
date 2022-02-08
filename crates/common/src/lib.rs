@@ -40,6 +40,15 @@ pub struct ShaderConstants {
     pub y_axis: Axis,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ColorVal {
+    pub val: f32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+}
+
 #[cfg(not(target_arch = "spirv"))]
 mod need_std {
     use super::*;

@@ -9,6 +9,7 @@ pub struct Renderer {
     bind_group_layout: wgpu::BindGroupLayout,
     particles: wgpu::Buffer,
     constants: wgpu::Buffer,
+    colors: wgpu::Buffer,
 }
 
 impl Renderer {
@@ -40,6 +41,17 @@ impl Renderer {
                     },
                     count: None,
                 },
+                // colors: &[[f32;4]; 2]
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
             ],
         });
 
@@ -50,16 +62,45 @@ impl Renderer {
         });
 
         let pipeline = pipeline(device, &pipeline_layout, ctx.surface_format());
-        let (particles, constants) = buffers(device);
+
+        let particles = {
+            let desc = wgpu::BufferDescriptor {
+                label: None,
+                size: 1,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            };
+            device.create_buffer(&desc)
+        };
+        let constants = {
+            let desc = wgpu::BufferDescriptor {
+                label: None,
+                size: 1,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            };
+            device.create_buffer(&desc)
+        };
+        let colors = {
+            let desc = wgpu::BufferDescriptor {
+                label: None,
+                size: 1,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            };
+            device.create_buffer(&desc)
+        };
 
         Ok(Self {
             pipeline,
             bind_group_layout,
             particles,
             constants,
+            colors
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         device: &wgpu::Device,
@@ -68,6 +109,7 @@ impl Renderer {
         size: UVec2,
         x_axis: Axis,
         y_axis: Axis,
+        colors: [[f32;4];2]
     ) {
         // constants: &ShaderConstants
         self.constants = {
@@ -100,6 +142,15 @@ impl Renderer {
                 usage: wgpu::BufferUsages::UNIFORM,
             })
         };
+        // colors: &[[f32; 4]; 2]
+        self.colors = {
+            let contents = bytemuck::cast_slice(&colors);
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("colors_uniform"),
+                contents,
+                usage: wgpu::BufferUsages::UNIFORM,
+            })
+        }
     }
 
     pub fn pipeline(&self) -> &wgpu::RenderPipeline {
@@ -116,6 +167,10 @@ impl Renderer {
 
     pub fn constants(&self) -> wgpu::BindingResource {
         self.constants.as_entire_binding()
+    }
+
+    pub fn colors(&self) -> wgpu::BindingResource {
+        self.colors.as_entire_binding()
     }
 }
 
@@ -166,26 +221,4 @@ fn pipeline(
             }],
         }),
     })
-}
-
-fn buffers(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer) {
-    let particles = {
-        let desc = wgpu::BufferDescriptor {
-            label: None,
-            size: 1,
-            usage: wgpu::BufferUsages::UNIFORM,
-            mapped_at_creation: false,
-        };
-        device.create_buffer(&desc)
-    };
-    let constants = {
-        let desc = wgpu::BufferDescriptor {
-            label: None,
-            size: 1,
-            usage: wgpu::BufferUsages::UNIFORM,
-            mapped_at_creation: false,
-        };
-        device.create_buffer(&desc)
-    };
-    (particles, constants)
 }

@@ -36,6 +36,8 @@ struct App {
     on_image: bool,
     settings_open: bool,
     help_open: bool,
+    color_open: bool,
+    colors: [[f32;4]; 2],
 }
 
 impl App {
@@ -78,6 +80,8 @@ impl App {
             on_image: false,
             settings_open: false,
             help_open: false,
+            color_open: false,
+            colors: [[-1.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]]
         };
         app.correct_y_axis();
         Ok(app)
@@ -169,6 +173,7 @@ impl archie::event::EventHandler for App {
                 glam::uvec2(width, height),
                 self.x_axis,
                 self.y_axis,
+                self.colors,
             );
             // make a new bind group
             device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -182,6 +187,10 @@ impl archie::event::EventHandler for App {
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: self.renderer.particles(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.renderer.colors(),
                     },
                 ],
             })
@@ -240,6 +249,13 @@ impl archie::event::EventHandler for App {
                 ui.with_layout(egui::Layout::right_to_left(), |ui| {
                     if ui.button("🔧").on_hover_text("Settings").clicked() {
                         self.settings_open = !self.settings_open;
+                    }
+                    if ui
+                        .button("✏")
+                        .on_hover_text("Opens color dialogue")
+                        .clicked()
+                    {
+                        self.color_open = !self.color_open;
                     }
                     if ui
                         .button("Help")
@@ -396,17 +412,37 @@ impl archie::event::EventHandler for App {
                             ",
                         );
                     });
-                ui.collapsing("Fields", |ui| {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.heading("Distance");
-                        ui.separator();
-                        ui.heading("Potential");
-                        ui.separator();
-                        ui.heading("Force");
-                    });
-                });
             });
             self.help_open = open;
+        }
+
+        {
+            let mut open = self.color_open;
+            let a = &mut self.colors[0][1..].try_into().unwrap();
+            let b = &mut self.colors[1][1..].try_into().unwrap();
+            egui::Window::new("Colors").open(&mut open).show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.color_edit_button_rgb(a);
+                    let b = self.colors[1][0];
+                    ui.add(
+                        egui::DragValue::new(&mut self.colors[0][0])
+                            .min_decimals(2)
+                            .clamp_range(-f32::INFINITY..=b),
+                    );
+                });
+                ui.horizontal(|ui| {
+                    ui.color_edit_button_rgb(b);
+                    let a = self.colors[0][0];
+                    ui.add(
+                        egui::DragValue::new(&mut self.colors[1][0])
+                            .min_decimals(2)
+                            .clamp_range(a..=f32::INFINITY),
+                    );
+                });
+            });
+            self.colors[0][1..].copy_from_slice(a);
+            self.colors[1][1..].copy_from_slice(b);
+            self.color_open = open;
         }
 
         egui::Window::new("Info").resizable(false).show(ctx, |ui| {
