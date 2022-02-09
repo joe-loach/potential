@@ -37,7 +37,7 @@ struct App {
     settings_open: bool,
     help_open: bool,
     color_open: bool,
-    colors: [[f32;4]; 2],
+    colors: [[f32; 4]; 2],
 }
 
 impl App {
@@ -81,10 +81,25 @@ impl App {
             settings_open: false,
             help_open: false,
             color_open: false,
-            colors: [[-1.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]]
+            colors: [[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]],
         };
         app.correct_y_axis();
         Ok(app)
+    }
+
+    fn place_image(&mut self, ctx: &egui::CtxRef, ui: &mut egui::Ui, rect: egui::Rect) {
+        let size = rect.size();
+        self.texture_size = uvec2(size.x as u32, size.y as u32);
+        let image = ui.put(
+            rect,
+            egui::Image::new(self.texture_id, size).sense(egui::Sense::focusable_noninteractive()),
+        );
+        let rect = image.rect;
+        self.texture_pos = {
+            let top_left = rect.min;
+            vec2(top_left.x, top_left.y)
+        };
+        self.on_image = ui.rect_contains_pointer(rect) && !ctx.wants_pointer_input();
     }
 
     fn zoom(&mut self, zoom: f32, translate: bool) {
@@ -341,19 +356,70 @@ impl archie::event::EventHandler for App {
             }
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let text_color = ctx.style().visuals.noninteractive().text_color();
+        let frame = egui::Frame::none().fill(ctx.style().visuals.window_fill());
+        egui::CentralPanel::default().frame(frame).show(ctx, |ui| {
+            let rect = ui.max_rect();
             let size = ui.available_size();
-            self.texture_size = uvec2(size.x as u32, size.y as u32);
-            let image = ui.add(
-                egui::Image::new(self.texture_id, size)
-                    .sense(egui::Sense::focusable_noninteractive()),
+
+            const SHRINK_FACTOR: f32 = 20.0;
+            let img_rect = rect
+                .shrink(SHRINK_FACTOR)
+                .translate(egui::Vec2::splat(SHRINK_FACTOR / 2.0));
+            let img_size = img_rect.size();
+
+            let (_, painter) = ui.allocate_painter(size, egui::Sense::hover());
+            painter.text(
+                egui::pos2(img_rect.left(), rect.top() + 2.0),
+                egui::Align2::LEFT_TOP,
+                self.x_axis.min,
+                egui::TextStyle::Monospace,
+                text_color,
             );
-            let rect = image.rect;
-            self.texture_pos = {
-                let top_left = rect.min;
-                vec2(top_left.x, top_left.y)
-            };
-            self.on_image = ui.rect_contains_pointer(rect) && !ctx.wants_pointer_input();
+            painter.text(
+                egui::pos2(img_rect.right(), rect.top() + 2.0),
+                egui::Align2::RIGHT_TOP,
+                self.x_axis.max,
+                egui::TextStyle::Monospace,
+                text_color,
+            );
+            painter.text(
+                egui::pos2(rect.left() + 2.0, img_rect.top()),
+                egui::Align2::LEFT_TOP,
+                self.y_axis.max,
+                egui::TextStyle::Monospace,
+                text_color,
+            );
+            painter.text(
+                egui::pos2(rect.left() + 2.0, img_rect.bottom()),
+                egui::Align2::LEFT_BOTTOM,
+                self.y_axis.min,
+                egui::TextStyle::Monospace,
+                text_color,
+            );
+            let stroke = egui::Stroke::new(1.0, egui::Color32::WHITE);
+            for i in 0..21 {
+                let x = img_rect.left() + (img_size.x / 20.0) * i as f32;
+                painter.line_segment(
+                    [
+                        egui::pos2(x, img_rect.top()),
+                        egui::pos2(x, img_rect.top() - 5.0),
+                    ],
+                    stroke,
+                );
+            }
+            for i in 0..21 {
+                let y = img_rect.top() + (img_size.y / 20.0) * i as f32;
+                painter.line_segment(
+                    [
+                        egui::pos2(img_rect.left(), y),
+                        egui::pos2(img_rect.left() - 5.0, y),
+                    ],
+                    stroke,
+                );
+            }
+
+            self.place_image(ctx, ui, img_rect);
         });
 
         {
