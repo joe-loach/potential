@@ -11,6 +11,7 @@ extern crate spirv_std;
 use spirv_std::macros::spirv;
 
 #[cfg(target_arch = "spirv")]
+#[allow(unused_imports)]
 use crate::spirv_std::num_traits::Float;
 
 use spirv_std::glam::*;
