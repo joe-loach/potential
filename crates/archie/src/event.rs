@@ -151,7 +151,7 @@ where
                     let (dx, dy) = match delta {
                         event::MouseScrollDelta::LineDelta(dx, dy) => (dx, dy),
                         event::MouseScrollDelta::PixelDelta(delta) => {
-                            (delta.x as f32 / 8.0, delta.y as f32 / 8.0)
+                            (delta.x as f32 / 32.0, delta.y as f32 / 32.0)
                         }
                     };
                     state.wheel_moved(dx, dy);
