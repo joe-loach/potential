@@ -77,7 +77,7 @@ impl App {
             y_axis_before: Axis::new(-1.0, 1.0),
             texture,
             texture_id,
-            texture_size: uvec2(100, 100),
+            texture_size: vec2(100.0, 100.0),
             texture_pos: vec2(0.0, 0.0),
             on_image: false,
             help_open: false,
@@ -90,7 +90,7 @@ impl App {
 
     fn place_image(&mut self, ctx: &egui::CtxRef, ui: &mut egui::Ui, rect: egui::Rect) {
         let size = rect.size();
-        self.texture_size = uvec2(size.x as u32, size.y as u32);
+        self.texture_size = vec2(size.x, size.y);
         let image = ui.put(
             rect,
             egui::Image::new(self.texture_id, size).sense(egui::Sense::focusable_noninteractive()),
@@ -119,8 +119,8 @@ impl App {
     }
 
     fn correct_y_axis(&mut self) {
-        let w = self.texture_size.x as f32;
-        let h = self.texture_size.y as f32;
+        let w = self.texture_size.x;
+        let h = self.texture_size.y;
         let ratio = (w / h).min(h / w);
         self.y_axis = self.x_axis * ratio;
     }
@@ -142,7 +142,7 @@ impl archie::event::EventHandler for App {
         if self.dragging && self.on_image {
             let orig_mouse = map_pos(
                 self.mouse_raw - self.texture_pos,
-                vec2(self.texture_size.x as f32, self.texture_size.y as f32),
+                self.texture_size,
                 self.x_axis_before,
                 self.y_axis_before,
             );
@@ -158,8 +158,8 @@ impl archie::event::EventHandler for App {
         encoder: &mut wgpu::CommandEncoder,
         _: &wgpu::TextureView,
     ) {
-        let width = self.texture_size.y;
-        let height = self.texture_size.y;
+        let width = (self.texture_size.x * self.scaling) as u32;
+        let height = (self.texture_size.y * self.scaling) as u32;
 
         // resize texture to make computation easier
         self.texture = ctx.device().create_texture(&wgpu::TextureDescriptor {
@@ -524,7 +524,7 @@ impl archie::event::EventHandler for App {
         self.mouse_raw = pos;
         self.mouse = map_pos(
             pos - self.texture_pos,
-            vec2(self.texture_size.x as f32, self.texture_size.y as f32),
+            self.texture_size,
             self.x_axis,
             self.y_axis,
         );
