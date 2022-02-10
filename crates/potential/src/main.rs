@@ -81,7 +81,7 @@ impl App {
             texture_pos: vec2(0.0, 0.0),
             on_image: false,
             help_open: false,
-            color_open: false,
+            scaling: 1.0,
             colors: [[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]],
         };
         app.correct_y_axis();
