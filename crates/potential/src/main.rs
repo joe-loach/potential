@@ -1,5 +1,6 @@
 mod nodes;
 mod renderer;
+mod scientific;
 
 use anyhow::Result;
 use archie::{
@@ -7,11 +8,13 @@ use archie::{
     winit::event::{ModifiersState, MouseButton, VirtualKeyCode},
 };
 use glam::*;
-use nodes::*;
-use particle::Particle;
 
-use common::*;
+use nodes::*;
+use scientific::Sci;
 use renderer::Renderer;
+
+use particle::Particle;
+use common::*;
 
 struct App {
     time: f32,
@@ -34,7 +37,6 @@ struct App {
     texture_size: UVec2,
     texture_pos: Vec2,
     on_image: bool,
-    settings_open: bool,
     help_open: bool,
     color_open: bool,
     colors: [[f32; 4]; 2],
@@ -78,7 +80,6 @@ impl App {
             texture_size: uvec2(100, 100),
             texture_pos: vec2(0.0, 0.0),
             on_image: false,
-            settings_open: false,
             help_open: false,
             color_open: false,
             colors: [[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]],
@@ -262,8 +263,12 @@ impl archie::event::EventHandler for App {
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(), |ui| {
-                    if ui.button("🔧").on_hover_text("Settings").clicked() {
-                        self.settings_open = !self.settings_open;
+                    if ui
+                        .button("Help")
+                        .on_hover_text("Opens help dialogue")
+                        .clicked()
+                    {
+                        self.help_open = !self.help_open;
                     }
                     if ui
                         .button("✏")
@@ -272,12 +277,8 @@ impl archie::event::EventHandler for App {
                     {
                         self.color_open = !self.color_open;
                     }
-                    if ui
-                        .button("Help")
-                        .on_hover_text("Opens help dialogue")
-                        .clicked()
-                    {
-                        self.help_open = !self.help_open;
+                    if ui.button("Correct Ratio").clicked() {
+                        self.correct_y_axis();
                     }
                 })
             })
@@ -362,38 +363,36 @@ impl archie::event::EventHandler for App {
             let rect = ui.max_rect();
             let size = ui.available_size();
 
-            const SHRINK_FACTOR: f32 = 20.0;
-            let img_rect = rect
-                .shrink(SHRINK_FACTOR)
-                .translate(egui::Vec2::splat(SHRINK_FACTOR / 2.0));
+            const SHRINK_FACTOR: f32 = 75.0;
+            let img_rect = rect.shrink(SHRINK_FACTOR);
             let img_size = img_rect.size();
 
             let (_, painter) = ui.allocate_painter(size, egui::Sense::hover());
             painter.text(
-                egui::pos2(img_rect.left(), rect.top() + 2.0),
-                egui::Align2::LEFT_TOP,
-                self.x_axis.min,
+                egui::pos2(img_rect.left(), img_rect.top() - 6.0),
+                egui::Align2::LEFT_BOTTOM,
+                Sci(self.x_axis.min),
                 egui::TextStyle::Monospace,
                 text_color,
             );
             painter.text(
-                egui::pos2(img_rect.right(), rect.top() + 2.0),
-                egui::Align2::RIGHT_TOP,
-                self.x_axis.max,
+                egui::pos2(img_rect.right(), img_rect.top() - 6.0),
+                egui::Align2::RIGHT_BOTTOM,
+                Sci(self.x_axis.max),
                 egui::TextStyle::Monospace,
                 text_color,
             );
             painter.text(
                 egui::pos2(rect.left() + 2.0, img_rect.top()),
                 egui::Align2::LEFT_TOP,
-                self.y_axis.max,
+                Sci(self.y_axis.max),
                 egui::TextStyle::Monospace,
                 text_color,
             );
             painter.text(
                 egui::pos2(rect.left() + 2.0, img_rect.bottom()),
                 egui::Align2::LEFT_BOTTOM,
-                self.y_axis.min,
+                Sci(self.y_axis.min),
                 egui::TextStyle::Monospace,
                 text_color,
             );
@@ -420,47 +419,27 @@ impl archie::event::EventHandler for App {
             }
 
             self.place_image(ctx, ui, img_rect);
-        });
 
-        {
-            let mut open = self.settings_open;
-            egui::Window::new("Settings")
-                .open(&mut open)
-                .default_width(200.0)
-                .show(ctx, |ui| {
-                    ui.label("X axis");
-                    ui.horizontal(|ui| {
-                        ui.add(
-                            egui::DragValue::new(&mut self.x_axis.min)
-                                .clamp_range(-f32::INFINITY..=self.x_axis.max),
-                        );
-                        ui.label("≤ X ≤");
-                        ui.add(
-                            egui::DragValue::new(&mut self.x_axis.max)
-                                .clamp_range(self.x_axis.min..=f32::INFINITY),
-                        );
-                    });
-                    ui.label("Y axis");
-                    ui.horizontal(|ui| {
-                        ui.add(
-                            egui::DragValue::new(&mut self.y_axis.min)
-                                .clamp_range(-f32::INFINITY..=self.y_axis.max),
-                        );
-                        ui.label("≤ Y ≤");
-                        ui.add(
-                            egui::DragValue::new(&mut self.y_axis.max)
-                                .clamp_range(self.y_axis.min..=f32::INFINITY),
-                        );
-                    });
-
-                    ui.separator();
-
-                    if ui.button("Correct Ratio").clicked() {
-                        self.correct_y_axis();
-                    }
+            ui.horizontal(|ui| {
+                ui.centered_and_justified(|ui| {
+                    let pos = self.mouse;
+                    let arr = {
+                        let mut particles = [Particle::default(); 32];
+                        let slice = self.particles.as_slice();
+                        particles[..slice.len().min(32)].copy_from_slice(slice);
+                        particles
+                    };
+                    let len = self.particles.len();
+                    let d = particle::dist(pos, &arr, len).unwrap_or(0.0);
+                    let v = particle::potential(pos, &arr, len);
+                    let e = particle::force(pos, &arr, len);
+                    ui.monospace(format!("pos = {}, {}", Sci(pos.x), Sci(pos.y)));
+                    ui.monospace(format!("d = {} m", Sci(d)));
+                    ui.monospace(format!("V = {} J/C", Sci(v)));
+                    ui.monospace(format!("F = {} N/C", Sci(e)));
                 });
-            self.settings_open = open;
-        }
+            });
+        });
 
         {
             let mut open = self.help_open;
@@ -510,25 +489,6 @@ impl archie::event::EventHandler for App {
             self.colors[1][1..].copy_from_slice(b);
             self.color_open = open;
         }
-
-        egui::Window::new("Info").resizable(false).show(ctx, |ui| {
-            ui.small("Under cursor");
-            ui.monospace(format!("pos: {:.2}, {:.2}", self.mouse.x, self.mouse.y));
-            let pos = self.mouse;
-            let arr = {
-                let mut particles = [Particle::default(); 32];
-                let slice = self.particles.as_slice();
-                particles[..slice.len().min(32)].copy_from_slice(slice);
-                particles
-            };
-            let len = self.particles.len();
-            let d = particle::dist(pos, &arr, len).unwrap_or(0.0);
-            let v = particle::potential(pos, &arr, len);
-            let e = particle::force(pos, &arr, len);
-            ui.monospace(format!("distance (m): {}", d));
-            ui.monospace(format!("potential (J/C): {}", v));
-            ui.monospace(format!("force (N/C): {}", e));
-        });
     }
 
     fn key_down(&mut self, key: VirtualKeyCode, modifiers: &ModifiersState) {
