@@ -165,8 +165,8 @@ impl archie::event::EventHandler for App {
         self.texture = ctx.device().create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width,
-                height,
+                width: width.max(1),
+                height: height.max(1),
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
