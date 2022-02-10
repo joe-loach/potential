@@ -34,11 +34,11 @@ struct App {
     y_axis_before: Axis,
     texture: wgpu::Texture,
     texture_id: egui::TextureId,
-    texture_size: UVec2,
+    texture_size: Vec2,
     texture_pos: Vec2,
+    scaling: f32,
     on_image: bool,
     help_open: bool,
-    color_open: bool,
     colors: [[f32; 4]; 2],
 }
 
@@ -270,18 +270,45 @@ impl archie::event::EventHandler for App {
                     {
                         self.help_open = !self.help_open;
                     }
-                    if ui
-                        .button("✏")
-                        .on_hover_text("Opens color dialogue")
-                        .clicked()
-                    {
-                        self.color_open = !self.color_open;
-                    }
                     if ui.button("Correct Ratio").clicked() {
                         self.correct_y_axis();
                     }
                 })
             })
+        });
+
+        egui::SidePanel::left("left_panel").show(ctx, |ui| {
+            {
+                ui.heading("Axes");
+            }
+            ui.separator();
+            {
+                ui.heading("Colors");
+                let a = &mut self.colors[0][1..].try_into().unwrap();
+                let b = &mut self.colors[1][1..].try_into().unwrap();
+                ui.horizontal(|ui| {
+                    ui.monospace("Max:");
+                    let a = self.colors[0][0];
+                    ui.add(
+                        egui::DragValue::new(&mut self.colors[1][0])
+                            .min_decimals(2)
+                            .clamp_range(a..=f32::INFINITY),
+                    );
+                    ui.color_edit_button_rgb(b);
+                });
+                ui.horizontal(|ui| {
+                    ui.monospace("Min:");
+                    let b = self.colors[1][0];
+                    ui.add(
+                        egui::DragValue::new(&mut self.colors[0][0])
+                            .min_decimals(2)
+                            .clamp_range(-f32::INFINITY..=b),
+                    );
+                    ui.color_edit_button_rgb(a);
+                });
+                self.colors[0][1..].copy_from_slice(a);
+                self.colors[1][1..].copy_from_slice(b);
+            }
         });
 
         egui::SidePanel::right("right_panel").show(ctx, |ui| {
@@ -459,35 +486,6 @@ impl archie::event::EventHandler for App {
                     });
             });
             self.help_open = open;
-        }
-
-        {
-            let mut open = self.color_open;
-            let a = &mut self.colors[0][1..].try_into().unwrap();
-            let b = &mut self.colors[1][1..].try_into().unwrap();
-            egui::Window::new("Colors").open(&mut open).show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.color_edit_button_rgb(a);
-                    let b = self.colors[1][0];
-                    ui.add(
-                        egui::DragValue::new(&mut self.colors[0][0])
-                            .min_decimals(2)
-                            .clamp_range(-f32::INFINITY..=b),
-                    );
-                });
-                ui.horizontal(|ui| {
-                    ui.color_edit_button_rgb(b);
-                    let a = self.colors[0][0];
-                    ui.add(
-                        egui::DragValue::new(&mut self.colors[1][0])
-                            .min_decimals(2)
-                            .clamp_range(a..=f32::INFINITY),
-                    );
-                });
-            });
-            self.colors[0][1..].copy_from_slice(a);
-            self.colors[1][1..].copy_from_slice(b);
-            self.color_open = open;
         }
     }
 
