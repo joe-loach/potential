@@ -1,7 +1,8 @@
 use winit::{
+    dpi::PhysicalSize,
     event::{
-        self, ElementState, Event, KeyboardInput, ModifiersState, MouseButton, VirtualKeyCode,
-        WindowEvent,
+        ElementState, Event, KeyboardInput, ModifiersState, MouseButton, MouseScrollDelta,
+        VirtualKeyCode, WindowEvent,
     },
     event_loop::{ControlFlow, EventLoop},
 };
@@ -90,12 +91,12 @@ where
         ctx.egui_platform.handle_event(&event);
 
         match event {
-            event::Event::WindowEvent {
+            Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 window_id,
             } if window_id == ctx.window.id() => *control_flow = ControlFlow::Exit,
 
-            event::Event::RedrawRequested(_) => {
+            Event::RedrawRequested(_) => {
                 ctx.egui_platform.update_time(start.elapsed().as_secs_f64());
 
                 // try our best to make sure we have a texture to draw to
@@ -139,14 +140,14 @@ where
                 last = current;
             }
 
-            event::Event::MainEventsCleared => {
+            Event::MainEventsCleared => {
                 ctx.window.request_redraw();
             }
 
-            event::Event::WindowEvent { event, .. } => match event {
-                event::WindowEvent::ScaleFactorChanged {
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::ScaleFactorChanged {
                     scale_factor: sf,
-                    new_inner_size: winit::dpi::PhysicalSize { width, height },
+                    new_inner_size: PhysicalSize { width, height },
                 } => {
                     // only change scale factor if it's valid
                     // if not, it might've caused panics elsewhere
@@ -157,27 +158,27 @@ where
                 }
                 // note: on windows, width and height are set to 0 when minimised.
                 // the surface cannot be resized to 0, do nothing.
-                event::WindowEvent::Resized(winit::dpi::PhysicalSize {
+                WindowEvent::Resized(PhysicalSize {
                     width: 0,
                     height: 0,
                 }) => {}
-                event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
+                WindowEvent::Resized(PhysicalSize { width, height }) => {
                     reconfigure_surface(&mut ctx, width, height);
                 }
-                event::WindowEvent::CursorMoved { position, .. } => {
+                WindowEvent::CursorMoved { position, .. } => {
                     let position = position.to_logical(scale_factor);
                     state.mouse_moved(position.x, position.y);
                 }
-                event::WindowEvent::MouseWheel { delta, .. } => {
+                WindowEvent::MouseWheel { delta, .. } => {
                     let (dx, dy) = match delta {
-                        event::MouseScrollDelta::LineDelta(dx, dy) => (dx, dy),
-                        event::MouseScrollDelta::PixelDelta(delta) => {
+                        MouseScrollDelta::LineDelta(dx, dy) => (dx, dy),
+                        MouseScrollDelta::PixelDelta(delta) => {
                             (delta.x as f32 / 32.0, delta.y as f32 / 32.0)
                         }
                     };
                     state.wheel_moved(dx, dy);
                 }
-                event::WindowEvent::MouseInput {
+                WindowEvent::MouseInput {
                     state: mouse_state,
                     button,
                     ..
@@ -186,10 +187,10 @@ where
                     ElementState::Released => state.mouse_up(button),
                 },
                 #[cfg(not(target_arch = "wasm32"))]
-                event::WindowEvent::ModifiersChanged(input) => {
+                WindowEvent::ModifiersChanged(input) => {
                     modifiers = input;
                 }
-                event::WindowEvent::KeyboardInput {
+                WindowEvent::KeyboardInput {
                     input:
                         KeyboardInput {
                             state: key_state,
