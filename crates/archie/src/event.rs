@@ -77,6 +77,14 @@ where
     let mut modifiers = ModifiersState::empty();
     let start = instant::Instant::now();
 
+    fn reconfigure_surface(ctx: &mut Context, width: u32, height: u32) {
+        ctx.surface_config.width = width;
+        ctx.surface_config.height = height;
+        ctx.surface.configure(&ctx.device, &ctx.surface_config);
+    }
+
+    let mut scale_factor = ctx.window.scale_factor();
+
     event_loop.run(move |event, _, control_flow| {
         state.raw_event(&event);
         ctx.egui_platform.handle_event(&event);
@@ -136,15 +144,28 @@ where
             }
 
             event::Event::WindowEvent { event, .. } => match event {
-                event::WindowEvent::Resized(size) => {
-                    if size.width == 0 || size.height == 0 {
-                        return;
+                event::WindowEvent::ScaleFactorChanged {
+                    scale_factor: sf,
+                    new_inner_size: winit::dpi::PhysicalSize { width, height },
+                } => {
+                    // only change scale factor if it's valid
+                    // if not, it might've caused panics elsewhere
+                    if winit::dpi::validate_scale_factor(sf) {
+                        scale_factor = sf;
                     }
-                    ctx.surface_config.width = size.width;
-                    ctx.surface_config.height = size.height;
-                    ctx.surface.configure(&ctx.device, &ctx.surface_config);
+                    reconfigure_surface(&mut ctx, *width, *height);
+                }
+                // note: on windows, width and height are set to 0 when minimised.
+                // the surface cannot be resized to 0, do nothing.
+                event::WindowEvent::Resized(winit::dpi::PhysicalSize {
+                    width: 0,
+                    height: 0,
+                }) => {}
+                event::WindowEvent::Resized(winit::dpi::PhysicalSize { width, height }) => {
+                    reconfigure_surface(&mut ctx, width, height);
                 }
                 event::WindowEvent::CursorMoved { position, .. } => {
+                    let position = position.to_logical(scale_factor);
                     state.mouse_moved(position.x, position.y);
                 }
                 event::WindowEvent::MouseWheel { delta, .. } => {
