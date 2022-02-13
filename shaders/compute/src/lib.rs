@@ -10,11 +10,10 @@ extern crate spirv_std;
 #[cfg(not(target_arch = "spirv"))]
 use spirv_std::macros::spirv;
 
-#[cfg(target_arch = "spirv")]
 #[allow(unused_imports)]
 use crate::spirv_std::num_traits::Float;
 
-use spirv_std::glam::*;
+use spirv_std::glam::{vec2, vec4, Vec2, Vec4, Vec4Swizzles};
 
 use common::*;
 use particle::*;
@@ -36,16 +35,24 @@ pub fn field(
     #[spirv(uniform, descriptor_set = 0, binding = 2)] colors: &[ColorVal; 2],
     output: &mut Vec4,
 ) {
-    if constants.len == 0 {
+    let ShaderConstants {
+        field,
+        len,
+        width,
+        height,
+        x_axis,
+        y_axis,
+    } = *constants;
+    if len == 0 {
         *output = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
     let pos = pos.xy();
-    let res = vec2(constants.width as f32, constants.height as f32);
-    let pos = map_pos(pos, res, constants.x_axis, constants.y_axis);
-    let len = constants.len as usize;
-    let t = match constants.field {
-        Field::Distance => particle::dist(pos, particles, len).unwrap_or(0.0),
+    let res = vec2(width as f32, height as f32);
+    let pos = map_pos(pos, res, x_axis, y_axis);
+    let len = len as usize;
+    let t = match field {
+        Field::Distance => particle::dist(pos, particles, len).unwrap(),
         Field::Potential => particle::potential(pos, particles, len),
         Field::Force => particle::force(pos, particles, len),
     };
