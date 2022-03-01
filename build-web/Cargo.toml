@@ -1,0 +1,8 @@
+[package]
+name = "build-web"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pico-args = "*"
+wasm-bindgen-cli-support = "*"

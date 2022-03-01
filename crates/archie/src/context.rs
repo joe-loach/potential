@@ -6,6 +6,8 @@ use winit::{
     window::{Fullscreen, Window, WindowBuilder},
 };
 
+use crate::timer::Timer;
+
 pub struct Context {
     pub(crate) window: Rc<Window>,
 
@@ -15,8 +17,7 @@ pub struct Context {
     pub(crate) surface: Surface,
     pub(crate) surface_config: SurfaceConfiguration,
 
-    pub(crate) egui_platform: egui_winit_platform::Platform,
-    pub(crate) egui_render_pass: egui_wgpu_backend::RenderPass,
+    pub(crate) timer: Timer,
 }
 
 impl Context {
@@ -32,6 +33,10 @@ impl Context {
         &self.queue
     }
 
+    pub fn window(&self) -> &Window {
+        self.window.as_ref()
+    }
+
     pub fn surface_format(&self) -> TextureFormat {
         self.surface_config.format
     }
@@ -43,32 +48,9 @@ impl Context {
     pub fn height(&self) -> u32 {
         self.surface_config.height
     }
-}
 
-impl Context {
-    pub fn egui_register_texture(
-        &mut self,
-        texture: &wgpu::Texture,
-        filter: wgpu::FilterMode,
-    ) -> egui::TextureId {
-        self.egui_render_pass
-            .egui_texture_from_wgpu_texture(&self.device, texture, filter)
-    }
-
-    pub fn egui_update_texture(
-        &mut self,
-        texture: &wgpu::Texture,
-        filter: wgpu::FilterMode,
-        id: egui::TextureId,
-    ) {
-        // discard errors
-        // TODO: care?
-        let _ = self.egui_render_pass.update_egui_texture_from_wgpu_texture(
-            &self.device,
-            texture,
-            filter,
-            id,
-        );
+    pub fn timer(&self) -> &Timer {
+        &self.timer
     }
 }
 
@@ -77,16 +59,20 @@ pub struct ContextBuilder {
     width: u32,
     height: u32,
     fullscreen: bool,
+    vsync: bool,
+    decorations: bool,
 }
 
 impl ContextBuilder {
     /// Creates a new [`ContextBuilder`].
     ///
     /// This is the same as calling `ContextBuilder::default()`.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn title<T: Into<String>>(self, title: T) -> Self {
         Self {
             title: title.into(),
@@ -94,16 +80,29 @@ impl ContextBuilder {
         }
     }
 
+    #[must_use]
     pub fn width(self, width: u32) -> Self {
         Self { width, ..self }
     }
 
+    #[must_use]
     pub fn height(self, height: u32) -> Self {
         Self { height, ..self }
     }
 
+    #[must_use]
     pub fn fullscreen(self, fullscreen: bool) -> Self {
         Self { fullscreen, ..self }
+    }
+
+    #[must_use]
+    pub fn vsync(self, vsync: bool) -> Self {
+        Self { vsync, ..self }
+    }
+
+    #[must_use]
+    pub fn decorations(self, decorations: bool) -> Self {
+        Self { decorations, ..self }
     }
 }
 
@@ -118,6 +117,8 @@ impl ContextBuilder {
             width,
             height,
             fullscreen,
+            vsync,
+            decorations,
             ..
         } = self;
 
@@ -128,6 +129,7 @@ impl ContextBuilder {
                 .with_visible(false)
                 .with_title(title)
                 .with_inner_size(size)
+                .with_decorations(decorations)
                 .with_fullscreen(if fullscreen {
                     Some(Fullscreen::Borderless(None))
                 } else {
@@ -241,20 +243,15 @@ impl ContextBuilder {
             format,
             width,
             height,
-            present_mode: wgpu::PresentMode::Mailbox,
+            present_mode: if vsync {
+                wgpu::PresentMode::Mailbox
+            } else {
+                wgpu::PresentMode::Immediate
+            },
         };
         surface.configure(&device, &surface_config);
 
-        let egui_platform =
-            egui_winit_platform::Platform::new(egui_winit_platform::PlatformDescriptor {
-                physical_width: width,
-                physical_height: height,
-                scale_factor: window.scale_factor(),
-                font_definitions: egui::FontDefinitions::default(),
-                style: Default::default(),
-            });
-
-        let egui_render_pass = egui_wgpu_backend::RenderPass::new(&device, format, 1);
+        let timer = Timer::new();
 
         let ctx = Context {
             window,
@@ -262,8 +259,7 @@ impl ContextBuilder {
             queue,
             surface,
             surface_config,
-            egui_platform,
-            egui_render_pass,
+            timer,
         };
 
         Ok((event_loop, ctx))
@@ -273,10 +269,12 @@ impl ContextBuilder {
 impl Default for ContextBuilder {
     fn default() -> Self {
         Self {
-            title: String::from("Potential"),
+            title: String::from("Archie Window"),
             width: 600,
             height: 600,
             fullscreen: false,
+            vsync: true,
+            decorations: true,
         }
     }
 }
