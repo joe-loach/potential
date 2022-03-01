@@ -224,16 +224,7 @@ impl ContextBuilder {
         };
         surface.configure(&device, &surface_config);
 
-        let egui_platform =
-            egui_winit_platform::Platform::new(egui_winit_platform::PlatformDescriptor {
-                physical_width: width,
-                physical_height: height,
-                scale_factor: window.scale_factor(),
-                font_definitions: egui::FontDefinitions::default(),
-                style: Default::default(),
-            });
-
-        let egui_render_pass = egui_wgpu_backend::RenderPass::new(&device, format, 1);
+        let timer = Timer::new();
 
         let ctx = Context {
             window,
@@ -241,8 +232,7 @@ impl ContextBuilder {
             queue,
             surface,
             surface_config,
-            egui_platform,
-            egui_render_pass,
+            timer,
         };
 
         Ok((event_loop, ctx))
