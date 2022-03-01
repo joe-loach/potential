@@ -20,8 +20,7 @@ pub mod log {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
                 let query_string = web_sys::window().unwrap().location().search().unwrap();
                 let level = super::platform::parse_url_query_string(&query_string, "RUST_LOG")
-                    .map(|x| x.parse().ok())
-                    .flatten()
+                    .and_then(|x| x.parse().ok())
                     .unwrap_or(_log::Level::Error);
                 let _ = wasm_logger::init(wasm_logger::Config::new(level));
             } else {
