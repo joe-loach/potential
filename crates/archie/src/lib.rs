@@ -8,7 +8,6 @@ pub mod event;
 
 pub use context::*;
 
-pub use egui;
 pub use wgpu;
 pub use winit;
 
