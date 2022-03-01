@@ -11,7 +11,7 @@ use crate::Context;
 
 #[allow(unused_variables)]
 pub trait EventHandler<E = ()> {
-    fn update(&mut self, ctx: &Context, dt: f32);
+    fn update(&mut self, ctx: &Context);
     fn draw(
         &mut self,
         ctx: &mut Context,
