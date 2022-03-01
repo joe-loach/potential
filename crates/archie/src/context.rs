@@ -33,6 +33,10 @@ impl Context {
         &self.queue
     }
 
+    pub fn window(&self) -> &Window {
+        self.window.as_ref()
+    }
+
     pub fn surface_format(&self) -> TextureFormat {
         self.surface_config.format
     }
@@ -44,7 +48,6 @@ impl Context {
     pub fn height(&self) -> u32 {
         self.surface_config.height
     }
-}
 
     pub fn timer(&self) -> &Timer {
         &self.timer
@@ -56,16 +59,20 @@ pub struct ContextBuilder {
     width: u32,
     height: u32,
     fullscreen: bool,
+    vsync: bool,
+    decorations: bool,
 }
 
 impl ContextBuilder {
     /// Creates a new [`ContextBuilder`].
     ///
     /// This is the same as calling `ContextBuilder::default()`.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use]
     pub fn title<T: Into<String>>(self, title: T) -> Self {
         Self {
             title: title.into(),
@@ -73,16 +80,29 @@ impl ContextBuilder {
         }
     }
 
+    #[must_use]
     pub fn width(self, width: u32) -> Self {
         Self { width, ..self }
     }
 
+    #[must_use]
     pub fn height(self, height: u32) -> Self {
         Self { height, ..self }
     }
 
+    #[must_use]
     pub fn fullscreen(self, fullscreen: bool) -> Self {
         Self { fullscreen, ..self }
+    }
+
+    #[must_use]
+    pub fn vsync(self, vsync: bool) -> Self {
+        Self { vsync, ..self }
+    }
+
+    #[must_use]
+    pub fn decorations(self, decorations: bool) -> Self {
+        Self { decorations, ..self }
     }
 }
 
@@ -97,6 +117,8 @@ impl ContextBuilder {
             width,
             height,
             fullscreen,
+            vsync,
+            decorations,
             ..
         } = self;
 
@@ -107,6 +129,7 @@ impl ContextBuilder {
                 .with_visible(false)
                 .with_title(title)
                 .with_inner_size(size)
+                .with_decorations(decorations)
                 .with_fullscreen(if fullscreen {
                     Some(Fullscreen::Borderless(None))
                 } else {
@@ -220,7 +243,11 @@ impl ContextBuilder {
             format,
             width,
             height,
-            present_mode: wgpu::PresentMode::Mailbox,
+            present_mode: if vsync {
+                wgpu::PresentMode::Mailbox
+            } else {
+                wgpu::PresentMode::Immediate
+            },
         };
         surface.configure(&device, &surface_config);
 
@@ -242,10 +269,12 @@ impl ContextBuilder {
 impl Default for ContextBuilder {
     fn default() -> Self {
         Self {
-            title: String::from("Potential"),
+            title: String::from("Archie Window"),
             width: 600,
             height: 600,
             fullscreen: false,
+            vsync: true,
+            decorations: true,
         }
     }
 }
