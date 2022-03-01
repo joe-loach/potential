@@ -74,7 +74,7 @@ where
     S: EventHandler<E> + 'static,
 {
     ctx.window.set_visible(true);
-    let mut last = instant::Instant::now();
+    ctx.timer.start();
     let mut modifiers = ModifiersState::empty();
     let start = instant::Instant::now();
 
