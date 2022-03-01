@@ -1,6 +1,3 @@
 [workspace]
-members = [
-    "crates/*",
-    "shaders/*",
-]
+members = [ "crates/*", "build-web" ]
 resolver = "2"

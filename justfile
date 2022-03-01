@@ -1,20 +1,11 @@
 set shell := ["powershell.exe", "-c"]
 
-default: run
-
-# serves potential
-serve: build
+serve:
+    cargo build-web potential --release --features web
     miniserve --index index.html ./docs/
 
-run: build
-    cargo run --release -p potential
-
-debug: build
+debug:
     cargo run -p potential
 
-# build potential
-build:
-    cargo run --release -p builder
-    cargo build --release -p potential
-    cargo build --release --target wasm32-unknown-unknown -p potential --features web
-    wasm-bindgen --target web --no-typescript --out-dir ./docs/ ./target/wasm32-unknown-unknown/release/potential.wasm
+run:
+    cargo run --release -p potential

@@ -1,0 +1,7 @@
+[alias]
+build-web = "run --release --package build-web --"
+
+[build]
+rustflags = [
+"--cfg=web_sys_unstable_apis"
+]
