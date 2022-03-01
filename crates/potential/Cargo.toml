@@ -11,8 +11,9 @@ web = ["archie/web"]
 
 [dependencies]
 archie = { path = "../archie" }
-particle = { path = "../particle" }
-common = { path = "../common" }
+# gui
+egui = { version = "0.17" }
+archie-egui = { path = "../archie_egui" }
 # math
 glam = { version = "0.20" }
 # loggging
