@@ -16,7 +16,7 @@ use std::future::Future;
 pub mod log {
     pub fn init() {
         cfg_if::cfg_if! {
-            if #[cfg(web)] {
+            if #[cfg(target_arch = "wasm32")] {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
                 let query_string = web_sys::window().unwrap().location().search().unwrap();
                 let level = super::platform::parse_url_query_string(&query_string, "RUST_LOG")
@@ -33,7 +33,7 @@ pub mod log {
 
 pub fn block_on(fut: impl Future<Output = ()> + 'static) {
     cfg_if::cfg_if! {
-        if #[cfg(web)] {
+        if #[cfg(target_arch = "wasm32")] {
             wasm_bindgen_futures::spawn_local(fut);
         } else {
             pollster::block_on(fut);

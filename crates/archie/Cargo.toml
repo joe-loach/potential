@@ -38,7 +38,3 @@ wasm-logger = "0.2.0"
 pollster = "0.2"
 # logging
 env_logger = "0.9"
-
-# used in build.rs
-[build-dependencies]
-cfg_aliases = "0.1"
