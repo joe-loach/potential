@@ -6,6 +6,8 @@ use winit::{
     window::{Fullscreen, Window, WindowBuilder},
 };
 
+use crate::timer::Timer;
+
 pub struct Context {
     pub(crate) window: Rc<Window>,
 
@@ -15,8 +17,7 @@ pub struct Context {
     pub(crate) surface: Surface,
     pub(crate) surface_config: SurfaceConfiguration,
 
-    pub(crate) egui_platform: egui_winit_platform::Platform,
-    pub(crate) egui_render_pass: egui_wgpu_backend::RenderPass,
+    pub(crate) timer: Timer,
 }
 
 impl Context {
@@ -45,30 +46,8 @@ impl Context {
     }
 }
 
-impl Context {
-    pub fn egui_register_texture(
-        &mut self,
-        texture: &wgpu::Texture,
-        filter: wgpu::FilterMode,
-    ) -> egui::TextureId {
-        self.egui_render_pass
-            .egui_texture_from_wgpu_texture(&self.device, texture, filter)
-    }
-
-    pub fn egui_update_texture(
-        &mut self,
-        texture: &wgpu::Texture,
-        filter: wgpu::FilterMode,
-        id: egui::TextureId,
-    ) {
-        // discard errors
-        // TODO: care?
-        let _ = self.egui_render_pass.update_egui_texture_from_wgpu_texture(
-            &self.device,
-            texture,
-            filter,
-            id,
-        );
+    pub fn timer(&self) -> &Timer {
+        &self.timer
     }
 }
 

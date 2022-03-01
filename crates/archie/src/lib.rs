@@ -1,7 +1,7 @@
 extern crate log as _log;
 
 mod context;
-mod helper;
+mod timer;
 
 pub mod event;
 
