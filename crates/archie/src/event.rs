@@ -75,6 +75,7 @@ where
 {
     ctx.window.set_visible(true);
     ctx.timer.start();
+
     let mut modifiers = ModifiersState::empty();
     let start = instant::Instant::now();
 
@@ -87,8 +88,7 @@ where
     let mut scale_factor = ctx.window.scale_factor();
 
     event_loop.run(move |event, _, control_flow| {
-        state.raw_event(&event);
-        ctx.egui_platform.handle_event(&event);
+        state.raw_event(&mut ctx, &event);
 
         match event {
             Event::WindowEvent {
