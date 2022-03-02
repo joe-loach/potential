@@ -28,13 +28,13 @@ unsafe impl bytemuck::Zeroable for Transform {}
 
 struct DrawCommand {
     vertices: usize,
-    texture: egui::TextureId,
+    texture_id: egui::TextureId,
     clip: (u32, u32, u32, u32),
 }
 
 pub struct Renderer {
     pipeline: Pipeline,
-    bind_groups: HashMap<egui::TextureId, BindGroup>,
+    textures: HashMap<egui::TextureId, Texture>,
     vertex_data: Vec<u8>,
     vertex_buffer: Buffer,
     vertex_buffer_capacity: usize,
@@ -61,7 +61,7 @@ impl Renderer {
 
         Self {
             pipeline,
-            bind_groups: HashMap::default(),
+            textures: HashMap::default(),
             vertex_data: Vec::new(),
             vertex_buffer,
             vertex_buffer_capacity: 0,
@@ -77,7 +77,7 @@ impl Renderer {
         encoder: &mut CommandEncoder,
         view: &TextureView,
         meshes: Vec<egui::ClippedMesh>,
-        textures_delta: &egui::TexturesDelta,
+        textures_delta: egui::TexturesDelta,
     ) {
         let device = ctx.device();
         let queue = ctx.queue();
@@ -85,9 +85,8 @@ impl Renderer {
         let scale_factor = ctx.window().scale_factor() as f32;
         let window_size = ctx.window().inner_size();
 
-        for (id, delta) in &textures_delta.set {
-            let binding = self.bind_texture(device, queue, format, &delta.image);
-            self.bind_groups.insert(*id, binding);
+        for (id, delta) in textures_delta.set {
+            self.update_texture(id, device, queue, format, delta);
         }
 
         let mut index_offset = 0;
@@ -135,7 +134,7 @@ impl Renderer {
 
             draw_commands.push(DrawCommand {
                 vertices: mesh.indices.len(),
-                texture: mesh.texture_id,
+                texture_id: mesh.texture_id,
                 clip: (
                     x,
                     y,
@@ -198,6 +197,36 @@ impl Renderer {
             }],
         });
 
+        let sampler = device.create_sampler(&SamplerDescriptor {
+            label: None,
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Linear,
+            ..Default::default()
+        });
+
+        let mut texure_bind_groups = HashMap::new();
+
+        for (id, texture) in &self.textures {
+            let bind_group = device.create_bind_group(&BindGroupDescriptor {
+                label: None,
+                layout: &self.pipeline.texture_bind_group_layout,
+                entries: &[
+                    BindGroupEntry {
+                        binding: 0,
+                        resource: BindingResource::TextureView(
+                            &texture.create_view(&TextureViewDescriptor::default()),
+                        ),
+                    },
+                    BindGroupEntry {
+                        binding: 1,
+                        resource: BindingResource::Sampler(&sampler),
+                    },
+                ],
+            });
+
+            texure_bind_groups.insert(*id, bind_group);
+        }
+
         {
             let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("egui render pass"),
@@ -218,7 +247,7 @@ impl Renderer {
 
             let mut vertex_offset: u32 = 0;
             for draw_command in draw_commands {
-                if let Some(texture_bind_group) = self.bind_groups.get(&draw_command.texture) {
+                if let Some(texture_bind_group) = texure_bind_groups.get(&draw_command.texture_id) {
                     pass.set_bind_group(1, texture_bind_group, &[]);
                     pass.set_scissor_rect(
                         draw_command.clip.0,
@@ -238,20 +267,62 @@ impl Renderer {
         }
     }
 
-    fn bind_texture(
-        &self,
+    fn update_texture(
+        &mut self,
+        id: egui::TextureId,
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        image: &egui::ImageData,
-    ) -> BindGroup {
-        fn texture(
-            device: &Device,
-            queue: &Queue,
-            data: &[u8],
-            format: TextureFormat,
-            size: Extent3d,
-        ) -> Texture {
+        delta: egui::epaint::ImageDelta,
+    ) {
+        let image = match delta.image {
+            egui::ImageData::Alpha(alpha) => {
+                let pixels = alpha.srgba_pixels(1.0).collect::<Vec<_>>();
+                egui::ColorImage {
+                    size: alpha.size,
+                    pixels,
+                }
+            }
+            egui::ImageData::Color(color) => color,
+        };
+
+        let [w, h] = image.size;
+        let data = bytemuck::cast_slice(image.pixels.as_slice());
+
+        let size = Extent3d {
+            width: w as u32,
+            height: h as u32,
+            depth_or_array_layers: 1,
+        };
+
+        let bytes_per_row = NonZeroU32::new(4 * size.width);
+        let rows_per_image = NonZeroU32::new(size.height);
+
+        if let Some([x, y]) = delta.pos {
+            // partially update an existing texture
+            if let Some(texture) = self.textures.get(&id) {
+                queue.write_texture(
+                    ImageCopyTextureBase {
+                        texture,
+                        mip_level: 0,
+                        origin: Origin3d {
+                            x: x as u32,
+                            y: y as u32,
+                            z: 0,
+                        },
+                        aspect: TextureAspect::All,
+                    },
+                    data,
+                    ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row,
+                        rows_per_image,
+                    },
+                    size,
+                );
+            }
+        } else {
+            // create a new texture
             let texture = device.create_texture(&TextureDescriptor {
                 label: None,
                 size,
@@ -263,69 +334,20 @@ impl Renderer {
             });
 
             queue.write_texture(
-                ImageCopyTexture {
-                    texture: &texture,
-                    mip_level: 0,
-                    origin: Origin3d::ZERO,
-                    aspect: TextureAspect::All,
-                },
+                texture.as_image_copy(),
                 data,
                 ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: NonZeroU32::new(4 * size.width),
-                    rows_per_image: NonZeroU32::new(size.height),
+                    bytes_per_row,
+                    rows_per_image,
                 },
                 size,
             );
 
-            texture
+            if let Some(old) = self.textures.insert(id, texture) {
+                old.destroy();
+            }
         }
-
-        let [w, h] = image.size();
-
-        let size = Extent3d {
-            width: w as u32,
-            height: h as u32,
-            depth_or_array_layers: 1,
-        };
-
-        let texture = match image {
-            egui::ImageData::Color(image) => {
-                let data = bytemuck::cast_slice(image.pixels.as_slice());
-                texture(device, queue, data, format, size)
-            }
-            egui::ImageData::Alpha(image) => {
-                let pixels = image.srgba_pixels(1.0).collect::<Vec<_>>();
-                let data = bytemuck::cast_slice(pixels.as_slice());
-                texture(device, queue, data, format, size)
-            }
-        };
-
-        let sampler = device.create_sampler(&SamplerDescriptor {
-            label: None,
-            mag_filter: FilterMode::Linear,
-            min_filter: FilterMode::Linear,
-            ..Default::default()
-        });
-
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout: &self.pipeline.texture_bind_group_layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: 0,
-                    resource: BindingResource::TextureView(
-                        &texture.create_view(&TextureViewDescriptor::default()),
-                    ),
-                },
-                BindGroupEntry {
-                    binding: 1,
-                    resource: BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-
-        bind_group
     }
 
     fn resize_buffers(&mut self, device: &Device) {
@@ -358,7 +380,9 @@ impl Renderer {
     }
 
     fn free_texture(&mut self, id: egui::TextureId) {
-        self.bind_groups.remove(&id);
+        if let Some(t) = self.textures.remove(&id) {
+            t.destroy();
+        }
     }
 }
 

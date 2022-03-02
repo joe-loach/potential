@@ -59,7 +59,7 @@ impl Egui {
         if let Some(output) = self.output.take() {
             let meshes = self.context.tessellate(output.shapes);
             self.renderer
-                .draw(ctx, encoder, view, meshes, &output.textures_delta);
+                .draw(ctx, encoder, view, meshes, output.textures_delta);
         }
     }
 
