@@ -10,9 +10,9 @@ edition = "2021"
 web = ["archie/web"]
 
 [dependencies]
-archie = { path = "../../archie/archie" }
+archie = { git = "https://github.com/joe-loach/archie" }
 # gui
-archie-egui = { path = "../../archie/archie_egui" }
+archie-egui = { git = "https://github.com/joe-loach/archie" }
 # math
 glam = { version = "0.20" }
 # loggging

@@ -53,6 +53,7 @@ checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
 [[package]]
 name = "archie"
 version = "0.0.1"
+source = "git+https://github.com/joe-loach/archie#bdd958053efa3f8866a53e8f2155e147d9684d02"
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",
@@ -74,6 +75,7 @@ dependencies = [
 [[package]]
 name = "archie-egui"
 version = "0.1.0"
+source = "git+https://github.com/joe-loach/archie#bdd958053efa3f8866a53e8f2155e147d9684d02"
 dependencies = [
  "archie",
  "bytemuck",
